@@ -15,4 +15,21 @@ def crop_image_by_bbox(image_path: str, bbox: dict, output_path: str) -> str:
 
     cropped_img = img.crop((left, top, right, bottom))
     cropped_img.save(output_path)
-  return output_path
+  return output_path 
+if __name__ == "__main__":
+    test_bbox = {"x": 50, "y": 50, "w": 200, "h": 200}
+    try:
+        import os
+
+        desktop = os.path.expanduser("~/Desktop")
+        files = [
+            f
+            for f in os.listdir(desktop)
+            if f.lower().startswith("whatsapp") or f.lower().startswith("sample")
+        ]
+        img_path = os.path.join(desktop, files[0]) if files else "sample.jpg"
+
+        crop_image_by_bbox(img_path, test_bbox, "cropped_output.jpg")
+        print("Testing Success: Image cropped successfully!")
+    except Exception as e:
+        print(f"Testing Failed: {e}")

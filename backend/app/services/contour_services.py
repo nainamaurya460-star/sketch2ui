@@ -1,3 +1,5 @@
+from email.mime import image
+
 import numpy as np
 import cv2
 import os
@@ -25,7 +27,8 @@ def load_image(image_path: str):
 def extract_contours(image: np.ndarray):
     """Image me se shapes detect karke bounding boxes nikalta hai"""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     bounding_boxes = []
@@ -35,3 +38,15 @@ def extract_contours(image: np.ndarray):
             bounding_boxes.append({"x": int(x), "y": int(y), "width": int(w), "height": int(h)})
             
     return bounding_boxes
+
+def clean_and_blur_image(image_path:str):
+    """Image ko read kro(Grayscale mode me)"""
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        print(f"Image load nahi ho rahi: {image_path}")
+        return None
+    """Gaussian blur apply karna"""
+    #(5,5) kernel size ke saath, jitna bda number utna zyada blur hoga
+    blurred_img = cv2.GaussianBlur(img, (5, 5), 0)
+    binary = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    return binary

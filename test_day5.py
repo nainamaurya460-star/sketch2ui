@@ -23,4 +23,4 @@ print("--- Day 5 Classification Results ---")
 print(f"Total Components Identified: {len(components)}\n")
 
 for i, comp in enumerate(components[:5], 1):
-    print(f"Component {i}: {comp}")s
+    print(f"Component {i}: {comp}")

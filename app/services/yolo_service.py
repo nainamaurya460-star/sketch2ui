@@ -1,20 +1,34 @@
 # backend/app/services/yolo_service.py
+import os
+from pathlib import Path
 from ultralytics import YOLO
 import cv2
 import numpy as np
 
+# 1. Dynamic Absolute Pathing: Server kisi bhi directory se chale, file path hamesha correct rahega
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_MODEL_PATH = str(BASE_DIR / "models" / "best.pt")
+
 class YOLOv8Classifier:
-    def __init__(self, model_path: str = "backend/app/models/best.pt"):
-        # Server startup par trained model weights load honge
+    def __init__(self, model_path: str = DEFAULT_MODEL_PATH):
+        # Trained model weights load karna
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found at: {model_path}")
         self.model = YOLO(model_path)
 
     def predict_components(self, image_bytes: bytes, confidence_threshold: float = 0.5):
-        # Image byte array ko OpenCV format me convert karna
+        # 2. Empty/Corrupted Image Validation
+        if not image_bytes:
+            raise ValueError("Provided image bytes are empty.")
+
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        # YOLOv8 Inference Run
-        results = self.model(img, conf=confidence_threshold)[0]
+        if img is None:
+            raise ValueError("Failed to decode image. Invalid image format.")
+
+        # 3. Model Inference with optimal image size (640)
+        results = self.model(img, conf=confidence_threshold, imgsz=640)[0]
         
         detected_elements = []
         for box in results.boxes:
@@ -36,4 +50,3 @@ class YOLOv8Classifier:
             })
             
         return detected_elements
-    

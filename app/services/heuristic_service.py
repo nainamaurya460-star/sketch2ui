@@ -61,3 +61,38 @@ def predict_ui_element(boxes: list) -> list:
                     "features": features
                 })
     return predictions
+"""
+Phase 2 - Day 4 & Day 5: ML Pipeline Integration & JSON Response Generation
+"""
+from app.services.heuristic_service import extract_geometry_features, classify_component
+
+def process_ui_pipeline(bounding_boxes: list) -> dict:
+    """
+    Day 4 & Day 5 Integration:
+    Processes raw boxes, extracts geometry, applies heuristic rules,
+    and returns a clean, structured JSON format for Day 6 API/Frontend.
+    """
+    elements = []
+    
+    for idx, box in enumerate(bounding_boxes, 1):
+        if len(box) == 4:
+            x, y, w, h = box
+            features = extract_geometry_features(x, y, w, h)
+            label = classify_component(w, h)
+            
+            # Day 4: Noise Filtering
+            if label and str(label).lower() != "noise":
+                elements.append({
+                    "id": f"elem_{idx}",
+                    "label": label,
+                    "confidence": 0.92,
+                    "box": {"x": x, "y": y, "width": w, "height": h},
+                    "features": features
+                })
+
+    # Day 5: Structured Final JSON Output
+    return {
+        "status": "success",
+        "total_elements": len(elements),
+        "predictions": elements
+    }

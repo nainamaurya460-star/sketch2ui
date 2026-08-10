@@ -2,9 +2,12 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import cv2
 import numpy as np
+from pydantic import BaseModel
+from typing import List
 
 # Services & Schemas Imports
 from app.services.cv_engine import preprocess_sketch
+from app.services.heuristic_service import process_ui_pipeline
 
 app = FastAPI(
     title="ASketch2UI API",
@@ -20,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class BoundingBoxRequest(BaseModel):
+    boxes: List[List[int]]
 
 @app.get("/", tags=["Health"])
 def read_root():
@@ -41,7 +47,7 @@ async def detect_contours(file: UploadFile = File(...)):
         if image is None:
             raise HTTPException(status_code=400, detail="Invalid image file format")
 
-        # 1. Apply Shalini's preprocess engine
+        # 1. Apply preprocess engine
         processed_image = preprocess_sketch(image)
 
         # 2. Extract contours
@@ -64,3 +70,17 @@ async def detect_contours(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image processing failed: {str(e)}")
+
+@app.post("/api/v1/predict", tags=["Prediction Engine"])
+def predict_ui_elements(payload: BoundingBoxRequest):
+    """
+    Predict UI components based on bounding box coordinates using geometry heuristics.
+    """
+    try:
+        if not payload.boxes:
+            raise HTTPException(status_code=400, detail="Bounding boxes list cannot be empty")
+            
+        result = process_ui_pipeline(payload.boxes)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

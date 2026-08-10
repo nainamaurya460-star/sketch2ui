@@ -6,6 +6,10 @@ class ClassificationService:
         # Future expansion for YOLO model initialization
         pass
 
+    def format_confidence(self, score: float) -> float:
+        """Day 4 Refinement: Format confidence score to 2 decimal places."""
+        return round(score, 2)
+
     def classify_bounding_boxes(
         self, bounding_boxes: List[BoundingBoxSchema]
     ) -> List[ElementClassification]:
@@ -17,7 +21,7 @@ class ClassificationService:
                 ElementClassification(
                     element_id=1,
                     label="InputBox",
-                    confidence_score=0.90,
+                    confidence_score=self.format_confidence(0.90),
                     bounding_box=BoundingBoxSchema(x=10, y=20, w=150, h=40),
                     source="Heuristic"
                 )
@@ -30,19 +34,19 @@ class ClassificationService:
             
             if aspect_ratio > 3.0:
                 label = "InputBox"
-                confidence = 0.92
+                raw_confidence = 0.92345
             elif 0.8 <= aspect_ratio <= 1.2:
                 label = "Button"
-                confidence = 0.88
+                raw_confidence = 0.88761
             else:
                 label = "Card"
-                confidence = 0.85
+                raw_confidence = 0.85123
 
             predictions.append(
                 ElementClassification(
                     element_id=idx + 1,
                     label=label,
-                    confidence_score=confidence,
+                    confidence_score=self.format_confidence(raw_confidence),
                     bounding_box=box,
                     source="Heuristic"
                 )

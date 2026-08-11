@@ -6,24 +6,32 @@ import numpy as np
 # Services & Schemas Imports
 from app.services.cv_engine import preprocess_sketch
 
+# 1. Initialize FastAPI Application
 app = FastAPI(
-    title="ASketch2UI API",
-    description="Backend API engine for sketch processing and UI component detection",
-    version="1.0.0"
+    title="Sketch2UI - Team Aarambh",
+    version="1.0.0",
+    description="Backend AI Engine for converting paper wireframe sketches into code."
 )
 
-# CORS Setup for Frontend Integration
+# 2. Configure CORS Middleware (Allows future frontend to communicate safely)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allows all connections during local dev
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
-@app.get("/", tags=["Health"])
+# 3. Root Welcome Endpoint
+@app.get("/", tags=["Root"])
 def read_root():
-    return {"message": "Welcome to ASketch2UI Backend Engine!"}
+    return {
+        "status": "Online",
+        "project": "Sketch2UI",
+        "team": "Aarambh",
+        "message": "Welcome to the Sketch2UI Backend Engine!",
+        "members": ["Naina (Leader)", "Shikha", "Shalini"]
+    }
 
 @app.post("/api/detect-contours", tags=["Sketch Engine"])
 async def detect_contours(file: UploadFile = File(...)):

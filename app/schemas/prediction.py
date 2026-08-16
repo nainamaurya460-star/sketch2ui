@@ -1,6 +1,10 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+
+# ==========================================
+# 1. Base Schemas & Legacy Models (Intact)
+# ==========================================
 class BoundingBoxSchema(BaseModel):
     """
     Bounding Box Coordinates: (x, y, width, height)
@@ -10,15 +14,17 @@ class BoundingBoxSchema(BaseModel):
     w: int = Field(..., ge=1, description="Width of the element")
     h: int = Field(..., ge=1, description="Height of the element")
 
+
 class PredictionRequest(BaseModel):
     """
     Request payload sent to classification endpoint
     """
     image_id: Optional[str] = Field(None, description="Unique identifier for the image")
     bounding_boxes: Optional[List[BoundingBoxSchema]] = Field(
-        default=None, 
+        default=None,
         description="Optional pre-extracted bounding boxes to classify"
     )
+
 
 class ElementClassification(BaseModel):
     """
@@ -30,6 +36,7 @@ class ElementClassification(BaseModel):
     bounding_box: BoundingBoxSchema = Field(..., description="Bounding box of the element")
     source: str = Field(..., description="Classification engine used ('YOLO' or 'Heuristic')")
 
+
 class PredictionResponse(BaseModel):
     """
     Final API Response structure for UI Classification
@@ -39,6 +46,10 @@ class PredictionResponse(BaseModel):
     predictions: List[ElementClassification] = Field(..., description="List of classified UI elements")
     message: str = Field("Classification completed successfully", description="Status message")
 
+
+# ==========================================
+# 2. Heuristic Helper Functions (Intact)
+# ==========================================
 def classify_component(box: dict) -> str:
     """
     Bounding box dictionary ke basis par UI element type predict karta hai.
@@ -47,7 +58,7 @@ def classify_component(box: dict) -> str:
     h = box.get("height", box.get("h", 0))
     area = w * h
     aspect_ratio = float(w) / h if h > 0 else 0.0
-    
+
     if 15 <= w <= 45 and 15 <= h <= 45 and 0.8 <= aspect_ratio <= 1.2:
         return "Checkbox / Radio Button / Small Icon"
     elif aspect_ratio > 4.0 and h <= 60:
@@ -59,19 +70,45 @@ def classify_component(box: dict) -> str:
     else:
         return "Container"
 
+
 def predict_ui_element(bounding_box: list) -> list:
     """
-    Har Bounding box ke sath classification label attach karta hai. 
+    Har Bounding box ke sath classification label attach karta hai.
     """
     classified_components = []
     for box in bounding_box:
-       label = classify_component(box)
-       component = {
-           "label": label, 
-           "x": box.get("x"), 
-           "y": box.get("y"), 
-           "width": box.get("width", box.get("w")), 
-           "height": box.get("height", box.get("h"))
-       }
-       classified_components.append(component)
+        label = classify_component(box)
+        component = {
+            "label": label,
+            "x": box.get("x"),
+            "y": box.get("y"),
+            "width": box.get("width", box.get("w")),
+            "height": box.get("height", box.get("h")),
+        }
+        classified_components.append(component)
     return classified_components
+
+
+# ==========================================
+# 3. Phase 3: YOLO & Live Stream Schemas (New)
+# ==========================================
+class DetectionItem(BaseModel):
+    element_id: int
+    class_id: int
+    label: str
+    confidence: float
+    box: BoundingBoxSchema
+
+
+class YoloDetectionResponse(BaseModel):
+    success: bool
+    total_detections: int
+    detections: List[DetectionItem]
+    inference_source: str = "YOLOv8-Inference"
+
+
+class StreamFrameResponse(BaseModel):
+    frame_id: int
+    timestamp: float
+    total_elements: int
+    detections: List[DetectionItem]

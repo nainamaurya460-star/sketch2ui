@@ -4,3 +4,12 @@ __pycache__/
 *.pyc
 .env
 .vscode/
+
+# Node dependencies
+node_modules/
+**/node_modules/
+backend-app/node_modules/
+
+# OS generated files
+.DS_Store
+Thumbs.db

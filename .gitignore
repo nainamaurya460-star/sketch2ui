@@ -13,3 +13,5 @@ backend-app/node_modules/
 # OS generated files
 .DS_Store
 Thumbs.db
+dataset/archive.zip
+dataset/base_dataset/

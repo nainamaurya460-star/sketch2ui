@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+﻿node_modules/
+*/node_modules/
+venv/
+*/venv/
+env/
+.env
+dist/
+build/
+__pycache__/
+*.pyc
+.vscode/
+=======
 venv/
 .venv/
 __pycache__/
@@ -15,3 +28,4 @@ backend-app/node_modules/
 Thumbs.db
 dataset/archive.zip
 dataset/base_dataset/
+>>>>>>> d0e0a2b634e220b984df5160a2f8362fe4f20355

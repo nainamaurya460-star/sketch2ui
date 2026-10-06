@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿node_modules/
 */node_modules/
 venv/
@@ -9,3 +10,22 @@ build/
 __pycache__/
 *.pyc
 .vscode/
+=======
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+
+# Node dependencies
+node_modules/
+**/node_modules/
+backend-app/node_modules/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+dataset/archive.zip
+dataset/base_dataset/
+>>>>>>> d0e0a2b634e220b984df5160a2f8362fe4f20355

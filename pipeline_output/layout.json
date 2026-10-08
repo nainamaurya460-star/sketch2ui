@@ -1,0 +1,20 @@
+{
+    "image_size": {
+        "width": 1287,
+        "height": 1340
+    },
+    "components": [
+        {
+            "id": 0,
+            "type": "Image",
+            "confidence": 0.954,
+            "bbox": {
+                "x": 357,
+                "y": 229,
+                "width": 462,
+                "height": 390
+            },
+            "crop_path": "pipeline_output\\crops\\Image_0.jpg"
+        }
+    ]
+}

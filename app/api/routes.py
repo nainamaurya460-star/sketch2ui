@@ -1,16 +1,19 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Any
 from app.services.heuristic_service import process_ui_pipeline
-app = FastAPI(tittle="Asketch2UI API", description="API for Asketch2UI")
+
+router = APIRouter()
+
 class BoundingBoxRequest(BaseModel):
-    boxes: List[List[int]]
-@app.post("api/v1/predict")
+    boxes: List[Any]
+
+@router.post("/api/v1/predict", tags=["Prediction Engine"])
 async def predict_ui_elements(payload: BoundingBoxRequest):
     try:
         if not payload.boxes:
             raise HTTPException(status_code=400, detail="Bounding boxes list cannot be empty.")
+        result = process_ui_pipeline(payload.boxes)
         return result
-    result = process_ui_pipeline(payload.boxes)
-  except Exception as e:
-    raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,0 +1,28 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+
+# Frontend build and dependencies
+frontend/
+node_modules/
+
+# Git & IDE configs
+.git
+.gitignore
+.vscode/
+.idea/
+
+# Dataset & training checkpoints (excluding packaged model in app/models)
+dataset/
+pipeline_output/
+runs/
+test_samples/
+yolov8n.pt

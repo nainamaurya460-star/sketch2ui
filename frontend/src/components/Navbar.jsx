@@ -1,38 +1,80 @@
 import React from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
-export default function Navbar({ onStartClick, onLogoClick }) {
+export default function Navbar({ onLaunchStudio, onStartClick, onLogoClick, onNavigate }) {
+  const handleLaunch = onLaunchStudio || onStartClick;
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-5xl">
-      <nav className="flex items-center justify-between px-6 py-3 rounded-full bg-white/[0.04] backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
-        
-        {/* Logo par click karne se wapas Landing page par aayenge */}
+    <header className="fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[#070709]/80 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        {/* Brand Logo */}
         <div 
-          onClick={onLogoClick} 
-          className="flex items-center gap-2.5 cursor-pointer"
+          onClick={onLogoClick}
+          className="flex items-center gap-2.5 cursor-pointer group"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-400 to-pink-500 flex items-center justify-center shadow-[0_0_15px_#22d3ee]">
-            <Sparkles className="w-4 h-4 text-black" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-400 to-pink-500 flex items-center justify-center shadow-[0_0_15px_#22d3ee] group-hover:scale-105 transition-transform">
+            <Sparkles className="w-4 h-4 text-black font-bold" />
           </div>
-          <span className="font-semibold tracking-wider text-base text-white">Sketch2UI</span>
+          <span className="font-semibold tracking-wider text-base text-white group-hover:text-cyan-300 transition-colors">
+            Sketch2UI
+          </span>
         </div>
 
-        <div className="hidden md:flex items-center gap-7 text-xs tracking-wider uppercase text-zinc-400">
-          <a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a>
-          <a href="#examples" className="hover:text-white transition-colors">Examples</a>
-          <a href="#docs" className="hover:text-white transition-colors">Docs</a>
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">GitHub ↗</a>
-        </div>
+        {/* Navigation Links */}
+        <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-zinc-400">
+          <button 
+            type="button"
+            onClick={() => scrollToSection('how-it-works')} 
+            className="hover:text-white transition-colors cursor-pointer"
+          >
+            HOW IT WORKS
+          </button>
+          
+          <button 
+            type="button"
+            onClick={() => scrollToSection('examples')} 
+            className="hover:text-white transition-colors cursor-pointer"
+          >
+            EXAMPLES
+          </button>
 
-        {/* Is button par click karne se Studio Workspace khulega */}
-        <button 
-          onClick={onStartClick}
-          className="flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-xs font-semibold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
-        >
-          <span>Try Sketch2UI</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </nav>
+          <button 
+            type="button"
+            onClick={() => onNavigate && onNavigate('docs')} 
+            className="hover:text-white transition-colors cursor-pointer"
+          >
+            DOCS
+          </button>
+
+          <a 
+            href="https://github.com/nainamaurya460-star/sketch2ui" 
+            target="_blank" 
+            rel="noreferrer" 
+            className="hover:text-white transition-colors"
+          >
+            GITHUB ↗
+          </a>
+        </nav>
+
+        {/* CTA Launch Studio Button */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLaunch}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-xs font-semibold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(6,182,212,0.35)] transition-all cursor-pointer"
+          >
+            <span>TRY SKETCH2UI</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
     </header>
   );
 }

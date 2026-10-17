@@ -1,0 +1,30 @@
+{
+  "dataset_version": "1.0.0",
+  "description": "Sketch2UI Ground Truth Benchmark Dataset for YOLOv8 Detection, EasyOCR, and Layout Synthesis",
+  "samples": [
+    {
+      "id": "sample_001_sketches_real",
+      "image_path": "test_images/sketches.png",
+      "description": "Real hand-drawn multi-component mobile wireframe sketch",
+      "expected_components": [
+        { "name": "Image", "box": [0, 84, 62, 279], "text": "" },
+        { "name": "Image", "box": [174, 105, 223, 165], "text": "" },
+        { "name": "Image", "box": [98, 104, 147, 163], "text": "" },
+        { "name": "Paragraph", "box": [99, 171, 132, 263], "text": "" },
+        { "name": "RadioButton", "box": [16, 15, 40, 75], "text": "Loco" },
+        { "name": "RadioButton", "box": [131, 243, 150, 263], "text": "" }
+      ],
+      "expected_row_groups": 0
+    },
+    {
+      "id": "sample_002_login_wireframe",
+      "image_path": "test_images/login_sketch.png",
+      "description": "Form input & button controls with high-contrast handwritten labels",
+      "expected_components": [
+        { "name": "Button", "box": [110, 57, 186, 403], "text": "Email Address" },
+        { "name": "Button", "box": [204, 57, 279, 397], "text": "Password" }
+      ],
+      "expected_row_groups": 0
+    }
+  ]
+}

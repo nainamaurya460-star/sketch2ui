@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: sketch2ui-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:5173,http://localhost:3000"

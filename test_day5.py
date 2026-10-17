@@ -9,7 +9,7 @@ from app.services.contour_services import load_image, extract_contours
 from app.services.heuristic_service import predict_ui_element
 
 # 1. Image load kar rahe hain using relative path
-img_path = os.path.join(BASE_DIR, "backend", "test_images", "sketches.png")
+img_path = os.path.join(BASE_DIR, "test_images", "sketches.png")
 img = load_image(img_path)
 
 # 2. Bounding boxes extract kar rahe hain

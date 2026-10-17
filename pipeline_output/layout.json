@@ -11,7 +11,7 @@
             "bbox": {
                 "x": 357,
                 "y": 229,
-                "width": 462,
+                "width": 461,
                 "height": 390
             },
             "crop_path": "pipeline_output\\crops\\Image_0.jpg"

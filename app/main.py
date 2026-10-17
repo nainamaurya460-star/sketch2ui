@@ -1,5 +1,8 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import os
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 import cv2
 import numpy as np
 from pydantic import BaseModel
@@ -8,21 +11,66 @@ from typing import List
 # Services & Schemas Imports
 from app.services.cv_engine import preprocess_sketch
 from app.services.heuristic_service import process_ui_pipeline
+from app.core.limiter import limiter
+from app.api.v1.endpoints.sketch import router as sketch_router
+from app.api.v1.endpoints.health import router as health_router
 
 app = FastAPI(
     title="ASketch2UI API",
-    description="Backend API engine for sketch processing and UI component detection",
+    description="Backend API engine for sketch processing, YOLOv8 vision pipeline, and React UI synthesis",
     version="1.0.0"
 )
 
-# CORS Setup for Frontend Integration
+# Attach Slowapi Rate Limiter to app state
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_custom_handler(request: Request, exc: RateLimitExceeded):
+    response = JSONResponse(
+        status_code=429,
+        content={
+            "error": "Too Many Requests",
+            "message": "Too Many Requests. Please wait a moment.",
+            "detail": f"Rate limit exceeded: {exc.detail}"
+        }
+    )
+    response.headers["Retry-After"] = "60"
+    return response
+
+# CORS Setup: dynamically read ALLOWED_ORIGINS env var (comma-separated), falling back to local dev origins
+raw_allowed_origins = os.getenv("ALLOWED_ORIGINS")
+if raw_allowed_origins and raw_allowed_origins.strip():
+    allowed_origins = [origin.strip() for origin in raw_allowed_origins.split(",") if origin.strip()]
+else:
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
+
+# Mount Routers: Health Diagnostics and Sketch Engine
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(health_router)
+app.include_router(sketch_router)
+
+
+@app.on_event("startup")
+async def startup_warmup():
+    """Warmup neural pipelines on server start for minimum first-request latency."""
+    try:
+        from app.services.ocr_service import get_ocr_service
+        ocr = get_ocr_service()
+        ocr.warmup()
+    except Exception:
+        pass
 
 class BoundingBoxRequest(BaseModel):
     boxes: List[List[int]]

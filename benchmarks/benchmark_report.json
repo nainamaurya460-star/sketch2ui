@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-10-14T15:06:58.631336+00:00",
+  "benchmark_dataset_version": "1.0.0",
+  "total_samples_evaluated": 2,
+  "aggregate_metrics": {
+    "detection": {
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1_score": 0.75,
+      "map50": 1.0
+    },
+    "ocr": {
+      "cer": 0.0,
+      "wer": 0.0,
+      "exact_match_accuracy": 1.0
+    },
+    "layout": {
+      "reading_order_similarity": 0.4616
+    }
+  },
+  "sample_breakdown": [
+    {
+      "sample_id": "sample_001_sketches_real",
+      "image_path": "test_images/sketches.png",
+      "detection": {
+        "gt_count": 6,
+        "pred_count": 7,
+        "tp": 6,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.8571,
+        "recall": 1.0,
+        "mean_iou_at_50": 1.0
+      },
+      "ocr": {
+        "evaluated_text_elements": 1,
+        "cer": 0.0,
+        "wer": 0.0,
+        "exact_match_accuracy": 1.0
+      },
+      "layout": {
+        "expected_row_groups": 0,
+        "detected_row_groups": 7,
+        "reading_order_similarity": 0.9231
+      }
+    },
+    {
+      "sample_id": "sample_002_login_wireframe",
+      "image_path": "test_images/login_sketch.png",
+      "detection": {
+        "gt_count": 2,
+        "pred_count": 1,
+        "tp": 0,
+        "fp": 1,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "mean_iou_at_50": 0.0
+      },
+      "ocr": {
+        "evaluated_text_elements": 0,
+        "cer": 0.0,
+        "wer": 0.0,
+        "exact_match_accuracy": 1.0
+      },
+      "layout": {
+        "expected_row_groups": 0,
+        "detected_row_groups": 1,
+        "reading_order_similarity": 0.0
+      }
+    }
+  ]
+}

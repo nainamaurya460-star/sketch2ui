@@ -7,19 +7,15 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
   const [hasPermission, setHasPermission] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Start webcam stream when modal opens
-  useEffect(() => {
-    if (!isOpen) {
-      stopCamera();
-      return;
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-
-    startCamera();
-
-    return () => {
-      stopCamera();
-    };
-  }, [isOpen]);
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
 
   const startCamera = async () => {
     setErrorMessage("");
@@ -48,15 +44,19 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
     }
   };
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+  // Start webcam stream when modal opens
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
+      return;
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
+
+    startCamera();
+
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen]);
 
   const captureFrame = () => {
     if (!videoRef.current) return;

@@ -49,34 +49,71 @@ def four_point_transform(image: np.ndarray, pts: np.ndarray) -> np.ndarray:
   return warped
 
 
+def apply_clahe_contrast_normalization(
+    image: np.ndarray,
+    clip_limit: float = 2.0,
+    tile_grid_size: tuple = (8, 8)
+) -> np.ndarray:
+    """
+    Applies Contrast Limited Adaptive Histogram Equalization (CLAHE) on the Luminance (L)
+    channel in LAB color space to equalize harsh ambient shadows from mobile camera photos
+    without blowing out fine pencil/pen strokes.
+    """
+    if image is None or image.size == 0:
+        return image
+
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+
+    # Single-channel grayscale
+    if len(image.shape) == 2:
+        return clahe.apply(image)
+    if len(image.shape) == 3 and image.shape[2] == 1:
+        return clahe.apply(image[:, :, 0])
+
+    # 3-channel BGR color image
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    cl = clahe.apply(l)
+    merged = cv2.merge((cl, a, b))
+    return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+
+
 def detect_paper_and_warp(image: np.ndarray):
-  """Finds the largest 4-sided contour (paper) and warps it.
+    """
+    Finds the largest 4-sided contour (paper) and warps it.
+    Applies CLAHE adaptive contrast normalization to eliminate harsh shadows
+    before edge detection and perspective transformation.
+    Falls back to the original image if no quadrilateral is found.
+    """
+    if image is None or image.size == 0:
+        return image, False
 
-  Falls back to the original image if no quadrilateral is found.
-  """
-  gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-  blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-  canny = cv2.Canny(blurred, 50, 150)
+    # Apply CLAHE adaptive lighting normalization prior to paper detection
+    normalized = apply_clahe_contrast_normalization(image)
 
-  contours, _ = cv2.findContours(
-      canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-  )
+    gray = cv2.cvtColor(normalized, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    canny = cv2.Canny(blurred, 50, 150)
 
-  max_area = 0
-  paper_corners = None
+    contours, _ = cv2.findContours(
+        canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
 
-  for cnt in contours:
-    area = cv2.contourArea(cnt)
-    if area > 5000:  # Noise threshold
-      peri = cv2.arcLength(cnt, True)
-      approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
+    max_area = 0
+    paper_corners = None
 
-      if len(approx) == 4 and area > max_area:
-        max_area = area
-        paper_corners = approx.reshape(4, 2)
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area > 5000:  # Noise threshold
+            peri = cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
 
-  if paper_corners is not None:
-    warped = four_point_transform(image, paper_corners)
-    return warped, True
+            if len(approx) == 4 and area > max_area:
+                max_area = area
+                paper_corners = approx.reshape(4, 2)
 
-  return image, False
+    if paper_corners is not None:
+        warped = four_point_transform(normalized, paper_corners)
+        return warped, True
+
+    return normalized, False

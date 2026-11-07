@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List
 import cv2
@@ -10,10 +11,17 @@ from app.services.file_service import read_uploaded_file
 from app.services.cv_engine import preprocess_sketch
 from app.services.camera_services import detect_paper_and_warp
 from app.services.yolo_service import get_yolo_classifier
-from app.services.heuristic_service import synthesize_layout_code
+from app.services.heuristic_service import (
+    synthesize_layout_code,
+    apply_semantic_reclassification,
+    synthesize_vlm_ast
+)
 from app.services.ocr_service import get_ocr_service
+from app.services.multimodal_service import get_multimodal_service
 from app.services.export_service import generate_project_zip, sanitize_project_name
 from app.schemas.sketch import SketchPredictResponse, ExportZipRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/sketch", tags=["Sketch Engine"])
 
@@ -65,6 +73,37 @@ async def predict_sketch(request: Request, file: UploadFile = File(...)):
     if image is None:
         raise HTTPException(status_code=400, detail="Invalid or corrupted image file format.")
 
+    # Determine project name from filename
+    project_name = "Synthesized Wireframe"
+    if file.filename:
+        stem = Path(file.filename).stem
+        if stem and stem.lower() not in ["image", "untitled", "file", "blob", "sketch", "captured_frame"]:
+            clean_name = stem.replace("_", " ").replace("-", " ").strip().title()
+            if clean_name:
+                project_name = clean_name
+
+    # Phase 2: Hybrid Multimodal Vision Reasoning Engine (Gemini 2.5 Flash / Claude)
+    multimodal_service = get_multimodal_service()
+    if multimodal_service.is_available():
+        try:
+            logger.info("Multimodal Vision API detected. Analyzing sketch with VLM...")
+            ast_data = multimodal_service.analyze_sketch(contents)
+            generated_code = synthesize_vlm_ast(ast_data, project_name=project_name)
+            response_elements = multimodal_service.ast_to_detected_elements(ast_data)
+            return {
+                "status": "success",
+                "project_name": project_name,
+                "elements_count": len(response_elements),
+                "detected_elements": response_elements,
+                "generated_code": generated_code,
+                "engine_used": "multimodal_vision"
+            }
+        except Exception as e:
+            logger.warning(
+                f"Multimodal vision inference failed: {e}. Gracefully falling back to local YOLO + OCR pipeline."
+            )
+
+    # Local YOLOv8 + Spatial OCR Engine Fallback
     # Step A (Perspective Warp): Pass to detect_paper_and_warp(image)
     active_image = image
     try:
@@ -79,30 +118,25 @@ async def predict_sketch(request: Request, file: UploadFile = File(...)):
 
     # Step B (YOLOv8 Detection): Run inference using YOLO('app/models/best.pt')
     classifier = get_yolo_classifier()
-    detected_elements = classifier.predict_image(active_image, confidence_threshold=0.25)
+    detected_elements = classifier.predict_image(active_image, confidence_threshold=0.18, iou=0.45)
 
     # If warp cropped out elements or yielded zero, try the raw image
     if len(detected_elements) == 0 and active_image is not image:
-        raw_detections = classifier.predict_image(image, confidence_threshold=0.25)
+        raw_detections = classifier.predict_image(image, confidence_threshold=0.18, iou=0.45)
         if len(raw_detections) > 0:
             detected_elements = raw_detections
 
     # Try lower threshold if still zero detections
     if len(detected_elements) == 0:
-        detected_elements = classifier.predict_image(active_image, confidence_threshold=0.15)
-
-    # Determine project name from filename
-    project_name = "Synthesized Wireframe"
-    if file.filename:
-        stem = Path(file.filename).stem
-        if stem and stem.lower() not in ["image", "untitled", "file", "blob", "sketch", "captured_frame"]:
-            clean_name = stem.replace("_", " ").replace("-", " ").strip().title()
-            if clean_name:
-                project_name = clean_name
+        detected_elements = classifier.predict_image(active_image, confidence_threshold=0.12, iou=0.45)
 
     # Step C: Handwritten Text OCR Pipeline (Sprint 2)
     ocr_service = get_ocr_service()
-    detected_elements = ocr_service.batch_extract_component_texts(active_image, detected_elements)
+    if not any(el.get("_ocr_done") for el in detected_elements):
+        detected_elements = ocr_service.batch_extract_component_texts(active_image, detected_elements)
+
+    # Heuristic Semantic Re-Classification Pass (corrects false Button predictions to TextBox/Heading)
+    detected_elements = apply_semantic_reclassification(detected_elements, active_image)
 
     # Step D: Spatial Hierarchy & Layout-to-Code Generator
     generated_code = synthesize_layout_code(detected_elements, project_name=project_name)
@@ -111,14 +145,22 @@ async def predict_sketch(request: Request, file: UploadFile = File(...)):
     # { "name": <str>, "conf": "<int>%", "box": [ymin, xmin, ymax, xmax] }
     response_elements = []
     for item in detected_elements:
+        c_name = item.get("class_name") or item["name"]
         el_dict = {
-            "name": item["name"],
+            "name": c_name,
+            "class_name": c_name,
             "conf": item["conf"],
             "box": item["box"],
             "color": item.get("color", "bg-cyan-500")
         }
         if item.get("text"):
             el_dict["text"] = item["text"]
+        if item.get("label_above"):
+            el_dict["label_above"] = item["label_above"]
+        if item.get("placeholder"):
+            el_dict["placeholder"] = item["placeholder"]
+        if item.get("variant"):
+            el_dict["variant"] = item["variant"]
         response_elements.append(el_dict)
 
     return {
@@ -126,7 +168,8 @@ async def predict_sketch(request: Request, file: UploadFile = File(...)):
         "project_name": project_name,
         "elements_count": len(response_elements),
         "detected_elements": response_elements,
-        "generated_code": generated_code
+        "generated_code": generated_code,
+        "engine_used": "local_cv_fallback"
     }
 
 

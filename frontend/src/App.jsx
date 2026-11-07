@@ -13,8 +13,10 @@ import ProjectDetailsView from './components/ProjectDetailsView';
 import DocumentationView from './components/DocumentationView';
 import SettingsView from './components/SettingsView';
 import NotFoundView from './components/NotFoundView';
+import AuthModal from './components/AuthModal';
+import { AuthProvider } from './context/AuthContext';
 
-export default function App() {
+function AppContent() {
   // Views: 'landing' | 'studio' | 'projects' | 'project_details' | 'history' | 'docs' | 'settings' | '404'
   const [currentView, setCurrentView] = useState('landing');
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -67,6 +69,9 @@ export default function App() {
       {/* Floating Custom Cursor */}
       <CustomCursor />
 
+      {/* Global Auth Modal */}
+      <AuthModal />
+
       {/* Atmospheric Ambient Glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-indigo-500/15 via-purple-500/5 to-transparent blur-[140px] pointer-events-none" />
       <div className="absolute top-[400px] right-[-100px] w-[500px] h-[500px] bg-cyan-500/10 blur-[150px] pointer-events-none" />
@@ -117,43 +122,36 @@ export default function App() {
       {/* Dedicated Project Details Inspection View */}
       {currentView === 'project_details' && (
         <div className="relative min-h-screen">
-          <ProjectDetailsView
+          <ProjectDetailsView 
             project={selectedProject}
-            onNavigate={handleNavigate}
+            onBack={() => handleNavigate('projects')}
             onOpenInStudio={handleOpenStudio}
-            onProjectDeleted={() => {
-              setSelectedProject(null);
-              handleNavigate('projects');
-            }}
-            onProjectRenamed={(updated) => {
-              setSelectedProject(updated);
-            }}
           />
         </div>
       )}
 
-      {/* Projects Dashboard View */}
+      {/* Saved Projects View */}
       {currentView === 'projects' && (
         <div className="relative min-h-screen">
           <ProjectsView 
-            onNavigate={handleNavigate}
+            onNavigate={handleNavigate} 
             onOpenProject={handleOpenStudio}
             onViewDetails={handleViewDetails}
           />
         </div>
       )}
 
-      {/* History & Chronological Audit Logs View */}
+      {/* Neural Pipeline History Log View */}
       {currentView === 'history' && (
         <div className="relative min-h-screen">
           <HistoryView 
             onNavigate={handleNavigate} 
-            onViewDetails={handleViewDetails}
+            onOpenProject={handleOpenStudio}
           />
         </div>
       )}
 
-      {/* System Documentation View */}
+      {/* Documentation & Architecture View */}
       {currentView === 'docs' && (
         <div className="relative min-h-screen">
           <DocumentationView 
@@ -184,5 +182,13 @@ export default function App() {
       )}
       </div>
     </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

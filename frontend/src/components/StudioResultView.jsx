@@ -22,12 +22,26 @@ import {
   Save,
   FileArchive,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  Image as ImageIcon
 } from 'lucide-react';
 import { saveProject } from '../services/storage';
-import { exportProjectZip } from '../services/api';
+import { exportProjectZip, createProject, getAuthToken } from '../services/api';
 import ComponentInspector from './ComponentInspector';
 import { generateJsxAndTailwind } from '../utils/astCodeGenerator';
+
+const COLOR_MAP = {
+  button: 'bg-rose-500',
+  checkbox: 'bg-amber-500',
+  heading: 'bg-purple-500',
+  image: 'bg-emerald-500',
+  label: 'bg-indigo-500',
+  link: 'bg-pink-500',
+  paragraph: 'bg-blue-500',
+  radiobutton: 'bg-orange-500',
+  select: 'bg-teal-500',
+  textbox: 'bg-cyan-500',
+};
 
 export default function StudioResultView({ data, sketchImage, onReset, onNavigate, onProjectUpdated }) {
   const [deviceView, setDeviceView] = useState('desktop');
@@ -59,8 +73,8 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
     return JSON.parse(JSON.stringify(raw));
   });
 
-  // Selected Element for Inspector Drawer
-  const [selectedElementId, setSelectedElementId] = useState(null);
+  // Selected Element Index for Inspector Drawer
+  const [selectedElementIndex, setSelectedElementIndex] = useState(null);
 
   // Dynamic Synthesized Code State
   const [codeSnippets, setCodeSnippets] = useState(() => {
@@ -122,6 +136,12 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
       }
     };
     const saved = saveProject(projectPayload);
+    const token = getAuthToken();
+    if (token) {
+      createProject(projectPayload, token).catch((err) =>
+        console.warn('[StudioResultView] Cloud autosync notice:', err.message)
+      );
+    }
     if (onProjectUpdated) {
       onProjectUpdated(saved);
     }
@@ -130,12 +150,18 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
 
   // Update properties on the active element
   const handleUpdateElement = (updatedFields) => {
-    if (!selectedElementId) return;
+    if (selectedElementIndex === null || !elements[selectedElementIndex]) return;
 
     setElements((prev) => {
-      const updated = prev.map((el) => {
-        if (el.id === selectedElementId) {
-          return { ...el, ...updatedFields };
+      const updated = prev.map((el, idx) => {
+        if (idx === selectedElementIndex) {
+          const merged = { ...el, ...updatedFields };
+          if (updatedFields.name) {
+            merged.name = updatedFields.name;
+            merged.label = updatedFields.name;
+            merged.color = COLOR_MAP[updatedFields.name.toLowerCase()] || 'bg-cyan-500';
+          }
+          return merged;
         }
         return el;
       });
@@ -149,10 +175,13 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
   };
 
   // Delete element from AST
-  const handleDeleteElement = (elementId) => {
+  const handleDeleteElement = (indexToDelete) => {
+    const targetIdx = typeof indexToDelete === 'number' ? indexToDelete : selectedElementIndex;
+    if (targetIdx === null) return;
+
     setElements((prev) => {
-      const updated = prev.filter((el) => el.id !== elementId);
-      setSelectedElementId(null);
+      const updated = prev.filter((_, idx) => idx !== targetIdx);
+      setSelectedElementIndex(null);
 
       const newCode = generateJsxAndTailwind(updated, projectName);
       setCodeSnippets(newCode);
@@ -173,7 +202,7 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
       id: el.id || `node_${i}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
     }));
     setElements(restored);
-    setSelectedElementId(null);
+    setSelectedElementIndex(null);
 
     const newCode = generateJsxAndTailwind(restored, projectName);
     setCodeSnippets(newCode);
@@ -229,7 +258,9 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
     }
   };
 
-  const selectedElement = elements.find(el => el.id === selectedElementId);
+  const selectedElement = (selectedElementIndex !== null && elements[selectedElementIndex])
+    ? elements[selectedElementIndex]
+    : null;
 
   return (
     <div className="flex h-screen bg-[#070709] text-white selection:bg-pink-500 selection:text-white overflow-hidden">
@@ -327,7 +358,7 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
       </aside>
 
       {/* 2. Main Studio Content */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
         <header className="h-16 border-b border-white/10 bg-[#070709]/80 backdrop-blur-xl px-8 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3">
             {isEditingName ? (
@@ -491,9 +522,9 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                 {elements.map((item, idx) => (
                   <div 
                     key={item.id || idx} 
-                    onClick={() => setSelectedElementId(item.id)}
+                    onClick={() => setSelectedElementIndex(idx)}
                     className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-all ${
-                      selectedElementId === item.id 
+                      selectedElementIndex === idx 
                         ? 'border-cyan-500 bg-cyan-500/10 text-cyan-300' 
                         : 'border-white/5 bg-white/[0.015] hover:border-cyan-500/30 text-zinc-300'
                     }`}
@@ -549,7 +580,7 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                 <span className="text-[10px] font-mono text-zinc-500">Click elements to inspect</span>
               </div>
 
-              <div className="flex-1 p-6 flex items-center justify-center bg-[#08090e]">
+              <div className="flex-1 p-6 flex items-center justify-center bg-[#08090e]" onClick={() => setSelectedElementIndex(null)}>
                 <div className={`transition-all duration-300 w-full ${
                   deviceView === 'mobile' ? 'max-w-[280px]' : deviceView === 'tablet' ? 'max-w-[340px]' : 'max-w-sm'
                 }`}>
@@ -557,7 +588,7 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                     <h3 className="text-lg font-bold tracking-tight text-center text-white">{projectName}</h3>
                     {elements && elements.length > 0 ? (
                       elements.map((el, i) => {
-                        const isSelected = selectedElementId === el.id;
+                        const isSelected = selectedElementIndex === i;
                         const type = (el.name || "").toLowerCase();
                         const customText = (el.text || "").trim();
 
@@ -566,12 +597,12 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                             key={el.id || i}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedElementId(el.id);
+                              setSelectedElementIndex(i);
                             }}
-                            className={`relative group rounded-2xl p-1.5 transition-all cursor-pointer ${
+                            className={`relative group rounded-2xl p-2 transition-all cursor-pointer ${
                               isSelected
                                 ? 'ring-2 ring-cyan-400 bg-cyan-500/[0.08] shadow-[0_0_20px_rgba(6,182,212,0.25)]'
-                                : 'hover:ring-1 hover:ring-cyan-400/50 hover:bg-white/[0.02]'
+                                : 'hover:ring-2 hover:ring-cyan-400 hover:bg-white/[0.04]'
                             }`}
                             title="Click to inspect and edit element"
                           >
@@ -582,50 +613,103 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                                 : 'bg-black/90 text-cyan-400 border border-cyan-500/30 opacity-0 group-hover:opacity-100'
                             }`}>
                               <span>{el.name || 'Component'}</span>
-                              {isSelected && <span>• Selected</span>}
+                              {isSelected && <span>• Inspected</span>}
                             </div>
 
                             {/* Rendered Element */}
                             {(() => {
-                              if (type.includes("heading") || type.includes("title") || type.includes("header")) {
-                                return <h4 className="text-base font-bold text-white tracking-tight">{customText || "Section Title"}</h4>;
+                              // 1. Heading: Bold <h2> / <h3> typography block
+                              if (type === "heading" || type.includes("heading") || type.includes("title") || type.includes("header")) {
+                                const headingText = customText || (i === 0 ? "Main Heading" : "Section Heading");
+                                return (
+                                  <div className="w-full py-1">
+                                    {i === 0 ? (
+                                      <h2 className="text-xl font-bold tracking-tight text-white leading-snug">
+                                        {headingText}
+                                      </h2>
+                                    ) : (
+                                      <h3 className="text-lg font-bold tracking-tight text-zinc-100 leading-snug">
+                                        {headingText}
+                                      </h3>
+                                    )}
+                                  </div>
+                                );
                               }
-                              if (type.includes("button") || type.includes("btn") || type.includes("submit")) {
+
+                              // 2. Button: Real styled button
+                              if (type === "button" || type.includes("button") || type.includes("btn") || type.includes("submit")) {
                                 const isSec = el.variant === 'secondary';
                                 return (
-                                  <button className={`w-full px-4 py-2.5 rounded-xl font-semibold text-xs shadow-lg transition-all pointer-events-none ${
+                                  <button className={`w-full px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide shadow-lg transition-all pointer-events-none flex items-center justify-center gap-2 ${
                                     isSec 
                                       ? 'border border-white/10 bg-white/5 text-zinc-300' 
                                       : 'bg-cyan-500 text-black shadow-cyan-500/20'
                                   }`}>
-                                    {customText || (isSec ? "Cancel" : "Action Button")}
+                                    <span>{customText || (isSec ? "Cancel" : "Action Button")}</span>
                                   </button>
                                 );
                               }
-                              if (type.includes("text") || type.includes("input")) {
+
+                              // 3. TextBox: Real input field with placeholder text
+                              if (type === "textbox" || type === "text_box" || type.includes("textbox") || type.includes("input") || type.includes("field") || type === "text") {
                                 const isPwd = customText.toLowerCase().includes("password");
                                 return (
-                                  <input 
-                                    type={isPwd ? "password" : "text"} 
-                                    placeholder={customText || "Enter text..."} 
-                                    readOnly 
-                                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none pointer-events-none" 
-                                  />
-                                );
-                              }
-                              if (type.includes("image") || type.includes("img") || type.includes("photo")) {
-                                return (
-                                  <div className="w-full aspect-video rounded-xl bg-white/5 border border-dashed border-white/10 flex items-center justify-center text-zinc-500 text-xs font-mono">
-                                    {customText || "Image Placeholder"}
+                                  <div className="w-full">
+                                    <input 
+                                      type={isPwd ? "password" : "text"} 
+                                      placeholder={customText || "Enter text..."} 
+                                      readOnly 
+                                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none pointer-events-none" 
+                                    />
                                   </div>
                                 );
                               }
+
+                              // 4. Image: Wireframe image container with photo placeholder icon & "Image Asset" label (or 2x2 grid)
+                              if (type === "image" || type.includes("image") || type.includes("img") || type.includes("photo")) {
+                                const isGrid = el.is_grid || el.variant === 'grid' || type.includes("grid");
+                                if (isGrid) {
+                                  return (
+                                    <div className="w-full grid grid-cols-2 gap-2.5">
+                                      {[1, 2, 3, 4].map((tileIdx) => (
+                                        <div 
+                                          key={tileIdx}
+                                          className="aspect-square rounded-xl bg-white/[0.04] border border-dashed border-white/15 flex flex-col items-center justify-center gap-1.5 p-2 text-center"
+                                        >
+                                          <div className="w-6 h-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center">
+                                            <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                                          </div>
+                                          <span className="text-[10px] font-mono text-zinc-400">
+                                            {customText ? `${customText} ${tileIdx}` : "Image Asset"}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="w-full aspect-video rounded-xl bg-white/[0.04] border border-dashed border-white/15 flex flex-col items-center justify-center gap-2 p-4 text-center">
+                                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+                                      <ImageIcon className="w-4 h-4 text-cyan-400" />
+                                    </div>
+                                    <span className="text-xs font-mono text-zinc-300 font-medium tracking-wide">
+                                      {customText || "Image Asset"}
+                                    </span>
+                                  </div>
+                                );
+                              }
+
+                              // 5. Paragraph
                               if (type.includes("paragraph") || type.includes("desc")) {
                                 return <p className="text-xs text-zinc-400 leading-relaxed">{customText || "Turn sketches into production-ready UI components."}</p>;
                               }
+
+                              // 6. Label
                               if (type.includes("label")) {
                                 return <label className="block text-xs font-medium text-zinc-300">{customText || "Label Field"}</label>;
                               }
+
+                              // 7. CheckBox
                               if (type.includes("check")) {
                                 return (
                                   <label className="flex items-center gap-2 text-xs text-zinc-300 pointer-events-none">
@@ -634,14 +718,18 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                                   </label>
                                 );
                               }
+
+                              // 8. RadioButton
                               if (type.includes("radio")) {
                                 return (
                                   <label className="flex items-center gap-2 text-xs text-zinc-300 pointer-events-none">
-                                    <input type="radio" name="preview-radio" defaultChecked readOnly className="w-4 h-4 bg-white/5 border-white/10 text-cyan-500" />
+                                    <input type="radio" name={`preview-radio-${el.id || i}`} defaultChecked readOnly className="w-4 h-4 bg-white/5 border-white/10 text-cyan-500" />
                                     <span>{customText || "Radio Option"}</span>
                                   </label>
                                 );
                               }
+
+                              // 9. Select / Dropdown
                               if (type.includes("select") || type.includes("dropdown")) {
                                 return (
                                   <select disabled className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs pointer-events-none">
@@ -649,9 +737,12 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
                                   </select>
                                 );
                               }
+
+                              // 10. Link
                               if (type.includes("link") || type.includes("anchor")) {
                                 return <span className="text-xs text-cyan-400 underline underline-offset-2">{customText || "Learn More →"}</span>;
                               }
+
                               return (
                                 <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300">
                                   {customText || el.name || "Component"}
@@ -755,8 +846,8 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
         <ComponentInspector
           element={selectedElement}
           onUpdateElement={handleUpdateElement}
-          onDeleteElement={handleDeleteElement}
-          onClose={() => setSelectedElementId(null)}
+          onDeleteElement={() => handleDeleteElement(selectedElementIndex)}
+          onClose={() => setSelectedElementIndex(null)}
         />
       )}
 

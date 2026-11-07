@@ -83,7 +83,9 @@ def detect_paper_and_warp(image: np.ndarray):
     Finds the largest 4-sided contour (paper) and warps it.
     Applies CLAHE adaptive contrast normalization to eliminate harsh shadows
     before edge detection and perspective transformation.
-    Falls back to the original image if no quadrilateral is found.
+    Falls back to the full uncropped image if no quadrilateral is found,
+    or if the candidate covers < 50% of the image (e.g. inner mobile border)
+    or has an aspect ratio distorted beyond standard paper dimensions (> 2.5 or < 0.4).
     """
     if image is None or image.size == 0:
         return image, False
@@ -99,7 +101,7 @@ def detect_paper_and_warp(image: np.ndarray):
         canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
 
-    max_area = 0
+    max_area = 0.0
     paper_corners = None
 
     for cnt in contours:
@@ -109,11 +111,37 @@ def detect_paper_and_warp(image: np.ndarray):
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
 
             if len(approx) == 4 and area > max_area:
-                max_area = area
+                max_area = float(area)
                 paper_corners = approx.reshape(4, 2)
 
     if paper_corners is not None:
+        img_h, img_w = image.shape[:2]
+        total_image_area = float(img_h * img_w)
+
+        # 1. Calculate area ratio: ratio = Contour Area / Total Image Area
+        ratio = (max_area / total_image_area) if total_image_area > 0 else 0.0
+
+        # 2. Calculate aspect ratio of candidate quadrilateral
+        rect = order_points(paper_corners)
+        (tl, tr, br, bl) = rect
+        width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        max_width = max(float(width_a), float(width_b))
+
+        height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+        height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        max_height = max(float(height_a), float(height_b))
+
+        aspect_ratio = (max_width / max_height) if max_height > 0 else 0.0
+
+        # Hardening check:
+        # If candidate covers < 50% of image (e.g. inner mobile border instead of full paper)
+        # OR aspect ratio is distorted beyond standard paper dimensions (> 2.5 or < 0.4),
+        # skip the warp and return the full uncropped image.
+        if ratio < 0.40 or aspect_ratio > 2.5 or aspect_ratio < 0.4:
+            return image, False
+
         warped = four_point_transform(normalized, paper_corners)
         return warped, True
 
-    return normalized, False
+    return image, False

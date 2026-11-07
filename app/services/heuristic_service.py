@@ -4,6 +4,8 @@ Location: app/services/heuristic_service.py
 """
 import json
 from typing import List, Dict, Any, Tuple, Optional
+import cv2
+import numpy as np
 
 
 def normalize_bounding_box(box):
@@ -144,7 +146,7 @@ def _parse_confidence(conf_val: Any) -> float:
 
 def _normalize_detected_element(raw_elem: Dict[str, Any], idx: int) -> Dict[str, Any]:
     """Normalizes an element into a consistent spatial node format."""
-    name = raw_elem.get("name") or raw_elem.get("label", "TextBox")
+    name = raw_elem.get("class_name") or raw_elem.get("name") or raw_elem.get("label", "TextBox")
     conf = raw_elem.get("conf") or f"{int(round(raw_elem.get('confidence', 0.9) * 100))}%"
     conf_score = _parse_confidence(raw_elem.get("confidence") or raw_elem.get("conf") or 0.88)
     
@@ -176,6 +178,8 @@ def _normalize_detected_element(raw_elem: Dict[str, Any], idx: int) -> Dict[str,
     return {
         "id": raw_elem.get("id", f"node_{idx}"),
         "name": name,
+        "class_name": raw_elem.get("class_name", name),
+        "label": name,
         "conf": conf,
         "conf_score": conf_score,
         "x1": int(x1),
@@ -187,6 +191,9 @@ def _normalize_detected_element(raw_elem: Dict[str, Any], idx: int) -> Dict[str,
         "area": int(area),
         "color": raw_elem.get("color", "bg-cyan-500"),
         "text": raw_elem.get("text"),
+        "label_above": raw_elem.get("label_above"),
+        "placeholder": raw_elem.get("placeholder"),
+        "variant": raw_elem.get("variant"),
         "children": []
     }
 
@@ -413,6 +420,195 @@ def _is_enclosed(parent: Dict[str, Any], child: Dict[str, Any], margin: int = 15
     )
 
 
+TEXTBOX_INPUT_KEYWORDS = [
+    "email", "password", "username", "phone", "name", "address", "search", "@", "user@"
+]
+
+ACTION_VERB_KEYWORDS = [
+    "sign in", "login", "submit", "sign up", "register", "continue", "next", "save", "delete"
+]
+
+STANDALONE_TITLE_KEYWORDS = [
+    "welcome back", "case details", "dashboard"
+]
+
+
+def apply_semantic_reclassification(
+    elements: List[Dict[str, Any]],
+    image: Optional[np.ndarray] = None
+) -> List[Dict[str, Any]]:
+    """
+    Task 2: Geometric & Contextual Guardrails Engine
+    Inspects bounding box geometry, aspect ratios, image fill, and extracted OCR text/labels:
+    1. Contextual Keyword Rule Engine:
+       - If element['text'] or element.get('label_above') matches:
+         ["email", "password", "username", "phone", "name", "address", "search", "@", "user@"]:
+           -> Set element['class_name'] = 'TextBox'
+           -> Set element['placeholder'] = matched_text
+       - If text matches short action verbs:
+         ["sign in", "login", "submit", "sign up", "register", "continue", "next", "save", "delete"]
+         inside a bounded rectangle:
+           -> Set element['class_name'] = 'Button'
+           -> Set element['variant'] = 'primary'
+       - If text matches standalone title text ("welcome back", "case details", "dashboard")
+         without a bounding container:
+           -> Set element['class_name'] = 'Heading'
+    2. Aspect Ratio & Dimension Guardrails:
+       - For any Button candidate:
+         - If height 30px <= h <= 65px and elongated width (w >= 150px or aspect_ratio >= 2.5) without action text:
+           reclassify as TextBox.
+         - If height > 75px and width > 120px without action text:
+           reclassify as container.
+    """
+    if not elements:
+        return []
+
+    # Find sketch vertical bounds to know what is at the top of the canvas
+    all_y1 = []
+    for el in elements:
+        if "y1" in el:
+            all_y1.append(el["y1"])
+        elif "box" in el and len(el["box"]) == 4:
+            all_y1.append(int(el["box"][0]))
+    min_y = min(all_y1) if all_y1 else 0
+    max_y = max(all_y1) if all_y1 else 500
+    y_range = max(1, max_y - min_y)
+
+    for elem in elements:
+        name = elem.get("class_name") or elem.get("name") or elem.get("label", "")
+        name_lower = name.lower()
+        raw_text = (elem.get("text") or "").strip()
+        text_lower = raw_text.lower()
+        label_above = (elem.get("label_above") or "").strip()
+        label_lower = label_above.lower()
+        conf_val = elem.get("confidence") or elem.get("conf") or 0.5
+        conf_score = _parse_confidence(conf_val)
+
+        # Extract dimensions
+        w = elem.get("w", 0)
+        h = elem.get("h", 0)
+        y1 = elem.get("y1", 0)
+        x1 = elem.get("x1", 0)
+        if (w == 0 or h == 0) and "box" in elem and len(elem["box"]) == 4:
+            b = elem["box"]
+            y1 = int(b[0])
+            x1 = int(b[1])
+            y2 = int(b[2])
+            x2 = int(b[3])
+            w = max(1, x2 - x1)
+            h = max(1, y2 - y1)
+            elem["x1"] = x1
+            elem["y1"] = y1
+            elem["x2"] = x2
+            elem["y2"] = y2
+            elem["w"] = w
+            elem["h"] = h
+        elif "x1" in elem and "y1" in elem:
+            y1 = elem["y1"]
+            x1 = elem["x1"]
+            w = elem.get("w", elem.get("x2", x1) - x1)
+            h = elem.get("h", elem.get("y2", y1) - y1)
+
+        aspect_ratio = float(w) / float(h) if h > 0 else 0.0
+
+        # --- Rule 0: Link / Anchor Preservation ---
+        if name_lower in ["link", "anchor"] or (raw_text and raw_text.endswith("?")):
+            elem["class_name"] = "Link"
+            elem["name"] = "Link"
+            elem["label"] = "Link"
+            elem["color"] = "bg-pink-500"
+            elem["text"] = raw_text
+            continue
+
+        # --- Rule 1: Contextual Keyword Rule Engine - Input Keywords -> TextBox ---
+        matched_input_text = None
+        # 1. Check text inside the box first
+        for kw in TEXTBOX_INPUT_KEYWORDS:
+            if kw in text_lower:
+                matched_input_text = raw_text
+                break
+        # 2. Check label immediately above if inside text didn't match
+        if not matched_input_text:
+            for kw in TEXTBOX_INPUT_KEYWORDS:
+                if kw in label_lower:
+                    matched_input_text = label_above
+                    break
+
+        if matched_input_text:
+            elem["class_name"] = "TextBox"
+            elem["name"] = "TextBox"
+            elem["label"] = "TextBox"
+            elem["color"] = "bg-cyan-500"
+            elem["placeholder"] = matched_input_text
+            if not elem.get("text"):
+                elem["text"] = matched_input_text
+            continue
+
+        # --- Rule 2: Short Action Verbs inside bounded rectangle -> Button ---
+        is_action_verb = any(v in text_lower for v in ACTION_VERB_KEYWORDS)
+        if is_action_verb and w >= 10 and h >= 10:
+            elem["class_name"] = "Button"
+            elem["name"] = "Button"
+            elem["label"] = "Button"
+            elem["variant"] = "primary"
+            elem["color"] = "bg-rose-500"
+            elem["text"] = raw_text
+            continue
+
+        # --- Rule 3: Standalone Title Text without bounding container -> Heading ---
+        is_standalone_title = any(t in text_lower for t in STANDALONE_TITLE_KEYWORDS)
+        if is_standalone_title:
+            elem["class_name"] = "Heading"
+            elem["name"] = "Heading"
+            elem["label"] = "Heading"
+            elem["color"] = "bg-purple-500"
+            elem["text"] = raw_text
+            continue
+
+        # --- Rule 4: Aspect Ratio & Dimension Guardrails for Button candidates ---
+        if name_lower in ["button", "btn", "submit"]:
+            if 30 <= h <= 65:
+                # Elongated empty or non-action box -> TextBox (unless high confidence filled button)
+                if (not raw_text or not is_action_verb) and (w >= 150 or aspect_ratio >= 2.5):
+                    is_solid_filled = False
+                    if image is not None and image.size > 0:
+                        try:
+                            ih, iw = image.shape[:2]
+                            cy1 = max(0, min(ih - 1, y1 + int(0.15 * h)))
+                            cy2 = max(0, min(ih, y1 + int(0.85 * h)))
+                            cx1 = max(0, min(iw - 1, x1 + int(0.15 * w)))
+                            cx2 = max(0, min(iw, x1 + int(0.85 * w)))
+                            if cy2 > cy1 and cx2 > cx1:
+                                crop = image[cy1:cy2, cx1:cx2]
+                                gray_crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if len(crop.shape) == 3 else crop
+                                if np.mean(gray_crop) < 110:
+                                    is_solid_filled = True
+                        except Exception:
+                            is_solid_filled = False
+
+                    if not is_solid_filled and conf_score < 0.85:
+                        elem["class_name"] = "TextBox"
+                        elem["name"] = "TextBox"
+                        elem["label"] = "TextBox"
+                        elem["color"] = "bg-cyan-500"
+                        if not elem.get("placeholder"):
+                            elem["placeholder"] = raw_text if raw_text else "Enter text..."
+                        continue
+            elif h > 75 and w > 120 and not is_action_verb:
+                # Too tall for a standard button, reclassify as container
+                elem["class_name"] = "container"
+                elem["name"] = "container"
+                elem["label"] = "container"
+                elem["color"] = "bg-slate-500"
+                continue
+
+        # Ensure consistent class_name / name / label
+        if not elem.get("class_name"):
+            elem["class_name"] = elem.get("name") or elem.get("label", "TextBox")
+
+    return elements
+
+
 def build_spatial_hierarchy(elements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     1. Normalizes elements into spatial nodes.
@@ -420,6 +616,7 @@ def build_spatial_hierarchy(elements: List[Dict[str, Any]]) -> List[Dict[str, An
     3. Spatial Sort: Sorts components primarily by vertical coordinate (y1), then horizontal (x1).
     4. Container Grouping: Groups child elements that lie inside card/container bounding boxes.
     """
+    elements = apply_semantic_reclassification(elements)
     normalized = [_normalize_detected_element(el, i + 1) for i, el in enumerate(elements)]
     if not normalized:
         return []
@@ -474,7 +671,7 @@ def _render_element_markup(
       - Image -> <div className="...">Image Placeholder</div>
       - CheckBox, RadioButton, Select, Link
     """
-    name_lower = elem["name"].lower().replace("-", "_").replace(" ", "_")
+    name_lower = (elem.get("class_name") or elem.get("name") or elem.get("label", "")).lower().replace("-", "_").replace(" ", "_")
     count = ctx_counts.get(name_lower, 0) + 1
     ctx_counts[name_lower] = count
 
@@ -499,7 +696,7 @@ def _render_element_markup(
     # 2. Button
     elif name_lower in ["button", "btn", "submit"]:
         extracted_text = elem.get("text")
-        if is_secondary_btn:
+        if is_secondary_btn and elem.get("variant") != "primary":
             sec_count = ctx_counts.get("sec_btn", 0) + 1
             ctx_counts["sec_btn"] = sec_count
             if extracted_text and extracted_text.strip():
@@ -529,11 +726,18 @@ def _render_element_markup(
 
     # 3. TextBox / input_field
     elif name_lower in ["textbox", "input_field", "input", "text_box", "textfield"]:
-        extracted_text = elem.get("text")
-        if extracted_text and extracted_text.strip():
-            placeholder = extracted_text.strip()
+        extracted_text = elem.get("placeholder") or elem.get("text")
+        label_text = elem.get("label_above")
+        raw_label = elem.get("label")
+        if not label_text and raw_label and raw_label.lower() not in ["textbox", "input", "textfield", "input_field"]:
+            label_text = raw_label
+
+        if extracted_text and str(extracted_text).strip():
+            placeholder = str(extracted_text).strip()
         elif placeholder_override:
             placeholder = placeholder_override
+        elif label_text:
+            placeholder = f"Enter {label_text.lower()}..."
         else:
             placeholders = [
                 "Enter your email address...",
@@ -543,13 +747,33 @@ def _render_element_markup(
                 "Enter password..."
             ]
             placeholder = placeholders[(count - 1) % len(placeholders)]
-        input_type = "password" if "password" in placeholder.lower() else "text"
+
+        explicit_type = (elem.get("type") or "").lower()
+        if explicit_type in ["email", "password", "number", "tel", "search", "text"]:
+            input_type = explicit_type
+        elif "email" in placeholder.lower() or "@" in placeholder or (label_text and "email" in label_text.lower()):
+            input_type = "email"
+        elif "password" in placeholder.lower() or (label_text and "password" in label_text.lower()):
+            input_type = "password"
+        else:
+            input_type = "text"
+
         width_cls = "flex-1 w-full" if in_row else "w-full"
-        return (
+        input_markup = (
             f'<input type="{input_type}" placeholder="{placeholder}" '
             f'{attr}="{width_cls} px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 '
             f'text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />'
         )
+
+        if label_text:
+            container_w = "flex-1 w-full" if in_row else "w-full"
+            return (
+                f'<div {attr}="{container_w} space-y-1.5">\n'
+                f'  <label {attr}="block text-xs font-medium text-zinc-300">{label_text}</label>\n'
+                f'  {input_markup}\n'
+                f'</div>'
+            )
+        return input_markup
 
     # 4. Paragraph / Label
     elif name_lower in ["paragraph", "label", "text", "description"]:
@@ -663,6 +887,7 @@ def _render_tree(
         # Multi-element RowCluster
         if item.get("is_row") and item.get("elements"):
             row_elements = item["elements"]
+            has_checkbox = any(el.get("name", "").lower() in ["checkbox", "check_box"] for el in row_elements)
             if item.get("is_buttons"):
                 # Action buttons side-by-side
                 lines.append(f'{pad}<div {attr}="flex items-center justify-end gap-3 w-full pt-2">')
@@ -673,6 +898,14 @@ def _render_tree(
                         btn, ctx_counts, is_jsx=is_jsx, in_row=True, is_secondary_btn=is_sec
                     )
                     for m_line in btn_markup.split("\n"):
+                        lines.append(f"{child_pad}{m_line}")
+                lines.append(f"{pad}</div>")
+            elif has_checkbox or item.get("is_checkbox_row"):
+                # Checkbox row (e.g. Checkbox + Forgot Password or Checkbox row)
+                lines.append(f'{pad}<div {attr}="flex items-center justify-between py-1">')
+                for elem in row_elements:
+                    elem_markup = _render_element_markup(elem, ctx_counts, is_jsx=is_jsx, in_row=True)
+                    for m_line in elem_markup.split("\n"):
                         lines.append(f"{child_pad}{m_line}")
                 lines.append(f"{pad}</div>")
             else:
@@ -852,4 +1085,209 @@ def synthesize_layout_code(
         "jsx": jsx_full,
         "tailwind": tailwind_full,
         "json": json.dumps(layout_ast, indent=2)
+    }
+
+
+def _infer_input_type(raw_type: Optional[str], placeholder: str, label: Optional[str]) -> str:
+    """Infers HTML5 input type (email, password, text, etc.) from semantic cues."""
+    if raw_type and raw_type.lower() in ["email", "password", "number", "tel", "search", "text"]:
+        return raw_type.lower()
+    p_low = (placeholder or "").lower()
+    l_low = (label or "").lower()
+    if "email" in p_low or "@" in p_low or "email" in l_low:
+        return "email"
+    if "password" in p_low or "password" in l_low:
+        return "password"
+    return "text"
+
+
+def synthesize_vlm_ast(
+    ast_data: Dict[str, Any],
+    project_name: str = "Synthesized Wireframe"
+) -> Dict[str, Any]:
+    """
+    Transforms a Multimodal Vision VLM AST into production-standard React 19 JSX and Tailwind markup.
+    Guarantees:
+      - Inputs render with separate <label>, real type="email" / type="password".
+      - Checkbox rows render with flex container: <div className="flex items-center justify-between py-1">.
+      - Buttons render with real recognized text labels (e.g. "SIGN IN").
+    """
+    components = ast_data.get("components", []) if isinstance(ast_data, dict) else []
+    if not components:
+        return synthesize_layout_code([], project_name=project_name)
+
+    comp_name = "".join(c for c in project_name.title() if c.isalnum()) or "SynthesizedWireframe"
+    jsx_lines = []
+    tw_lines = []
+    pad = "      "
+    child_pad = "        "
+
+    for comp in components:
+        c_type = (comp.get("type") or "textbox").lower()
+
+        # 1. Heading
+        if "head" in c_type or "title" in c_type:
+            text = comp.get("text") or project_name
+            level = comp.get("level", 1)
+            tag = "h1" if level == 1 else "h2"
+            jsx_lines.append(f'{pad}<{tag} className="text-lg font-bold tracking-tight text-white">{text}</{tag}>')
+            tw_lines.append(f'  <{tag} class="text-lg font-bold tracking-tight text-white">{text}</{tag}>')
+
+        # 2. Row Cluster (side-by-side elements)
+        elif c_type in ["row", "row_cluster"] or comp.get("elements"):
+            children = comp.get("elements", [])
+            has_checkbox = any((c.get("type") or "").lower() in ["checkbox", "check_box"] for c in children)
+            is_all_buttons = all((c.get("type") or "").lower() in ["button", "btn"] for c in children)
+
+            if is_all_buttons:
+                jsx_lines.append(f'{pad}<div className="flex items-center justify-end gap-3 w-full pt-2">')
+                tw_lines.append(f'  <div class="flex items-center justify-end gap-3 w-full pt-2">')
+                for b_idx, child in enumerate(children):
+                    btn_text = child.get("text", "Button")
+                    is_sec = (child.get("variant") == "secondary") or (b_idx < len(children) - 1)
+                    if is_sec:
+                        jsx_lines.append(f'{child_pad}<button className="px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-xs transition-all cursor-pointer">{btn_text}</button>')
+                        tw_lines.append(f'    <button class="px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-xs transition-all cursor-pointer">{btn_text}</button>')
+                    else:
+                        jsx_lines.append(f'{child_pad}<button className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs shadow-lg shadow-cyan-500/20 transition-all cursor-pointer">{btn_text}</button>')
+                        tw_lines.append(f'    <button class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs shadow-lg shadow-cyan-500/20 transition-all cursor-pointer">{btn_text}</button>')
+                jsx_lines.append(f'{pad}</div>')
+                tw_lines.append(f'  </div>')
+
+            elif has_checkbox:
+                # Production Checkbox flex container
+                jsx_lines.append(f'{pad}<div className="flex items-center justify-between py-1">')
+                tw_lines.append(f'  <div class="flex items-center justify-between py-1">')
+                for child in children:
+                    ch_type = (child.get("type") or "").lower()
+                    if "check" in ch_type:
+                        label = child.get("label") or child.get("text") or "Remember me"
+                        jsx_lines.append(f'{child_pad}<label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer">')
+                        jsx_lines.append(f'{child_pad}  <input type="checkbox" className="w-4 h-4 rounded bg-white/5 border-white/10 text-cyan-500 focus:ring-0 cursor-pointer" />')
+                        jsx_lines.append(f'{child_pad}  <span>{label}</span>')
+                        jsx_lines.append(f'{child_pad}</label>')
+
+                        tw_lines.append(f'    <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer">')
+                        tw_lines.append(f'      <input type="checkbox" class="w-4 h-4 rounded bg-white/5 border-white/10 text-cyan-500 focus:ring-0 cursor-pointer" />')
+                        tw_lines.append(f'      <span>{label}</span>')
+                        tw_lines.append(f'    </label>')
+                    elif "link" in ch_type or "anchor" in ch_type:
+                        l_text = child.get("text", "Forgot Password?")
+                        href = child.get("href", "#forgot")
+                        jsx_lines.append(f'{child_pad}<a href="{href}" className="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">{l_text} &rarr;</a>')
+                        tw_lines.append(f'    <a href="{href}" class="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">{l_text} &rarr;</a>')
+                    else:
+                        txt = child.get("text") or child.get("label") or "Field"
+                        jsx_lines.append(f'{child_pad}<span className="text-xs text-zinc-300">{txt}</span>')
+                        tw_lines.append(f'    <span class="text-xs text-zinc-300">{txt}</span>')
+                jsx_lines.append(f'{pad}</div>')
+                tw_lines.append(f'  </div>')
+
+            else:
+                # Responsive flex row (e.g. side-by-side inputs)
+                jsx_lines.append(f'{pad}<div className="flex flex-col sm:flex-row items-center gap-4 w-full">')
+                tw_lines.append(f'  <div class="flex flex-col sm:flex-row items-center gap-4 w-full">')
+                for child in children:
+                    label = child.get("label")
+                    placeholder = child.get("placeholder") or child.get("text") or (f"Enter {label.lower()}..." if label else "Enter text...")
+                    in_type = _infer_input_type(child.get("input_type") or child.get("type"), placeholder, label)
+
+                    if label:
+                        jsx_lines.append(f'{child_pad}<div className="flex-1 w-full space-y-1.5">')
+                        jsx_lines.append(f'{child_pad}  <label className="block text-xs font-medium text-zinc-300">{label}</label>')
+                        jsx_lines.append(f'{child_pad}  <input type="{in_type}" placeholder="{placeholder}" className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                        jsx_lines.append(f'{child_pad}</div>')
+
+                        tw_lines.append(f'    <div class="flex-1 w-full space-y-1.5">')
+                        tw_lines.append(f'      <label class="block text-xs font-medium text-zinc-300">{label}</label>')
+                        tw_lines.append(f'      <input type="{in_type}" placeholder="{placeholder}" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                        tw_lines.append(f'    </div>')
+                    else:
+                        jsx_lines.append(f'{child_pad}<input type="{in_type}" placeholder="{placeholder}" className="flex-1 w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                        tw_lines.append(f'    <input type="{in_type}" placeholder="{placeholder}" class="flex-1 w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                jsx_lines.append(f'{pad}</div>')
+                tw_lines.append(f'  </div>')
+
+        # 3. Text Input (with separate label and explicit input_type)
+        elif "input" in c_type or "text" in c_type:
+            label = comp.get("label")
+            placeholder = comp.get("placeholder") or comp.get("text") or (f"Enter {label.lower()}..." if label else "Enter text...")
+            in_type = _infer_input_type(comp.get("input_type") or comp.get("type"), placeholder, label)
+
+            if label:
+                jsx_lines.append(f'{pad}<div className="space-y-1.5 w-full">')
+                jsx_lines.append(f'{pad}  <label className="block text-xs font-medium text-zinc-300">{label}</label>')
+                jsx_lines.append(f'{pad}  <input type="{in_type}" placeholder="{placeholder}" className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                jsx_lines.append(f'{pad}</div>')
+
+                tw_lines.append(f'  <div class="space-y-1.5 w-full">')
+                tw_lines.append(f'    <label class="block text-xs font-medium text-zinc-300">{label}</label>')
+                tw_lines.append(f'    <input type="{in_type}" placeholder="{placeholder}" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                tw_lines.append(f'  </div>')
+            else:
+                jsx_lines.append(f'{pad}<input type="{in_type}" placeholder="{placeholder}" className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+                tw_lines.append(f'  <input type="{in_type}" placeholder="{placeholder}" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />')
+
+        # 4. Button (real recognized text)
+        elif "button" in c_type or "btn" in c_type or "submit" in c_type:
+            btn_text = comp.get("text") or "Submit"
+            variant = comp.get("variant", "primary")
+            if variant == "secondary":
+                jsx_lines.append(f'{pad}<button className="w-full px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-xs transition-all cursor-pointer">{btn_text}</button>')
+                tw_lines.append(f'  <button class="w-full px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-xs transition-all cursor-pointer">{btn_text}</button>')
+            else:
+                jsx_lines.append(f'{pad}<button className="w-full px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs shadow-lg shadow-cyan-500/20 transition-all cursor-pointer">{btn_text}</button>')
+                tw_lines.append(f'  <button class="w-full px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs shadow-lg shadow-cyan-500/20 transition-all cursor-pointer">{btn_text}</button>')
+
+        # 5. CheckBox (standalone)
+        elif "check" in c_type:
+            label = comp.get("label") or comp.get("text") or "Remember me"
+            jsx_lines.append(f'{pad}<label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer">')
+            jsx_lines.append(f'{pad}  <input type="checkbox" className="w-4 h-4 rounded bg-white/5 border-white/10 text-cyan-500 focus:ring-0 cursor-pointer" />')
+            jsx_lines.append(f'{pad}  <span>{label}</span>')
+            jsx_lines.append(f'{pad}</label>')
+
+            tw_lines.append(f'  <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer">')
+            tw_lines.append(f'    <input type="checkbox" class="w-4 h-4 rounded bg-white/5 border-white/10 text-cyan-500 focus:ring-0 cursor-pointer" />')
+            tw_lines.append(f'    <span>{label}</span>')
+            tw_lines.append(f'  </label>')
+
+        # 6. Link (standalone)
+        elif "link" in c_type or "anchor" in c_type:
+            l_text = comp.get("text", "Learn More")
+            href = comp.get("href", "#details")
+            jsx_lines.append(f'{pad}<a href="{href}" className="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">{l_text} &rarr;</a>')
+            tw_lines.append(f'  <a href="{href}" class="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">{l_text} &rarr;</a>')
+
+        # 7. Fallback / Paragraph
+        else:
+            p_text = comp.get("text") or comp.get("label") or "Content block"
+            jsx_lines.append(f'{pad}<p className="text-xs text-zinc-400 leading-relaxed">{p_text}</p>')
+            tw_lines.append(f'  <p class="text-xs text-zinc-400 leading-relaxed">{p_text}</p>')
+
+    jsx_body = "\n".join(jsx_lines)
+    tw_body = "\n".join(tw_lines)
+
+    jsx_full = (
+        'import React from "react";\n\n'
+        f'export default function {comp_name}() {{\n'
+        '  return (\n'
+        '    <div className="w-full max-w-md mx-auto p-6 rounded-3xl bg-[#090b10]/90 border border-white/10 backdrop-blur-2xl shadow-2xl space-y-4">\n'
+        f'{jsx_body}\n'
+        '    </div>\n'
+        '  );\n'
+        '}'
+    )
+
+    tailwind_full = (
+        '<div class="w-full max-w-md mx-auto p-6 rounded-3xl bg-[#090b10]/90 border border-white/10 backdrop-blur-2xl shadow-2xl space-y-4">\n'
+        f'{tw_body}\n'
+        '</div>'
+    )
+
+    return {
+        "framework": "React + Tailwind",
+        "jsx": jsx_full,
+        "tailwind": tailwind_full,
+        "json": json.dumps(ast_data, indent=2)
     }

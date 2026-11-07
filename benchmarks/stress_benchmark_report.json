@@ -1,0 +1,1442 @@
+{
+  "timestamp": "2026-10-23T10:46:35.061500+00:00",
+  "benchmark_version": "3.0.0-phase3",
+  "description": "Stress evaluation comparing clean sketches against notebook lines, graphite fade, and shadows",
+  "baseline_summary": {
+    "mAP_at_50": 1.0,
+    "recall": 0.25,
+    "f1_score": 0.2222
+  },
+  "conditions": {
+    "baseline_clean": {
+      "total_samples": 2,
+      "total_gt": 8,
+      "total_tp": 2,
+      "total_fp": 8,
+      "total_fn": 6,
+      "precision": 0.2,
+      "recall": 0.25,
+      "f1_score": 0.2222,
+      "mAP_at_50": 1.0,
+      "per_sample": [
+        {
+          "sample_id": "sample_001_sketches_real",
+          "metrics": {
+            "total_gt": 6,
+            "total_pred": 8,
+            "tp": 0,
+            "fp": 8,
+            "fn": 6,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mean_iou_50": 0.0,
+            "elements": [
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.977,
+                "box": [
+                  360,
+                  131,
+                  410,
+                  192
+                ],
+                "x1": 131,
+                "y1": 360,
+                "x2": 192,
+                "y2": 410,
+                "w": 61,
+                "h": 50,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "97%",
+                "confidence": 0.974,
+                "box": [
+                  285,
+                  129,
+                  336,
+                  190
+                ],
+                "x1": 129,
+                "y1": 285,
+                "x2": 190,
+                "y2": 336,
+                "w": 61,
+                "h": 51,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "85%",
+                "confidence": 0.846,
+                "box": [
+                  184,
+                  111,
+                  249,
+                  310
+                ],
+                "x1": 111,
+                "y1": 184,
+                "x2": 310,
+                "y2": 249,
+                "w": 199,
+                "h": 65,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "84%",
+                "confidence": 0.841,
+                "box": [
+                  73,
+                  24,
+                  115,
+                  113
+                ],
+                "x1": 24,
+                "y1": 73,
+                "x2": 113,
+                "y2": 115,
+                "w": 89,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "45%",
+                "confidence": 0.453,
+                "box": [
+                  184,
+                  24,
+                  239,
+                  109
+                ],
+                "x1": 24,
+                "y1": 184,
+                "x2": 109,
+                "y2": 239,
+                "w": 85,
+                "h": 55,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "33%",
+                "confidence": 0.327,
+                "box": [
+                  359,
+                  201,
+                  372,
+                  291
+                ],
+                "x1": 201,
+                "y1": 359,
+                "x2": 291,
+                "y2": 372,
+                "w": 90,
+                "h": 13,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "26%",
+                "confidence": 0.258,
+                "box": [
+                  126,
+                  20,
+                  168,
+                  194
+                ],
+                "x1": 20,
+                "y1": 126,
+                "x2": 194,
+                "y2": 168,
+                "w": 174,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "19%",
+                "confidence": 0.187,
+                "box": [
+                  360,
+                  201,
+                  372,
+                  290
+                ],
+                "x1": 201,
+                "y1": 360,
+                "x2": 290,
+                "y2": 372,
+                "w": 89,
+                "h": 12,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        },
+        {
+          "sample_id": "sample_002_login_wireframe",
+          "metrics": {
+            "total_gt": 2,
+            "total_pred": 2,
+            "tp": 2,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "mean_iou_50": 1.0,
+            "elements": [
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "35%",
+                "confidence": 0.352,
+                "box": [
+                  110,
+                  57,
+                  186,
+                  403
+                ],
+                "x1": 57,
+                "y1": 110,
+                "x2": 403,
+                "y2": 186,
+                "w": 346,
+                "h": 76,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "28%",
+                "confidence": 0.28,
+                "box": [
+                  204,
+                  57,
+                  279,
+                  397
+                ],
+                "x1": 57,
+                "y1": 204,
+                "x2": 397,
+                "y2": 279,
+                "w": 340,
+                "h": 75,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        }
+      ],
+      "recall_retention_pct": 100.0
+    },
+    "notebook_lines": {
+      "total_samples": 2,
+      "total_gt": 8,
+      "total_tp": 2,
+      "total_fp": 9,
+      "total_fn": 6,
+      "precision": 0.1818,
+      "recall": 0.25,
+      "f1_score": 0.2105,
+      "mAP_at_50": 1.0,
+      "per_sample": [
+        {
+          "sample_id": "sample_001_sketches_real",
+          "metrics": {
+            "total_gt": 6,
+            "total_pred": 8,
+            "tp": 0,
+            "fp": 8,
+            "fn": 6,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mean_iou_50": 0.0,
+            "elements": [
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.976,
+                "box": [
+                  360,
+                  131,
+                  410,
+                  192
+                ],
+                "x1": 131,
+                "y1": 360,
+                "x2": 192,
+                "y2": 410,
+                "w": 61,
+                "h": 50,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "97%",
+                "confidence": 0.974,
+                "box": [
+                  285,
+                  129,
+                  336,
+                  190
+                ],
+                "x1": 129,
+                "y1": 285,
+                "x2": 190,
+                "y2": 336,
+                "w": 61,
+                "h": 51,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "85%",
+                "confidence": 0.846,
+                "box": [
+                  184,
+                  111,
+                  249,
+                  310
+                ],
+                "x1": 111,
+                "y1": 184,
+                "x2": 310,
+                "y2": 249,
+                "w": 199,
+                "h": 65,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "83%",
+                "confidence": 0.826,
+                "box": [
+                  73,
+                  24,
+                  115,
+                  114
+                ],
+                "x1": 24,
+                "y1": 73,
+                "x2": 114,
+                "y2": 115,
+                "w": 90,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "43%",
+                "confidence": 0.433,
+                "box": [
+                  184,
+                  25,
+                  243,
+                  113
+                ],
+                "x1": 25,
+                "y1": 184,
+                "x2": 113,
+                "y2": 243,
+                "w": 88,
+                "h": 59,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "34%",
+                "confidence": 0.336,
+                "box": [
+                  126,
+                  20,
+                  168,
+                  194
+                ],
+                "x1": 20,
+                "y1": 126,
+                "x2": 194,
+                "y2": 168,
+                "w": 174,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "32%",
+                "confidence": 0.322,
+                "box": [
+                  359,
+                  201,
+                  372,
+                  291
+                ],
+                "x1": 201,
+                "y1": 359,
+                "x2": 291,
+                "y2": 372,
+                "w": 90,
+                "h": 13,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "20%",
+                "confidence": 0.198,
+                "box": [
+                  360,
+                  201,
+                  372,
+                  290
+                ],
+                "x1": 201,
+                "y1": 360,
+                "x2": 290,
+                "y2": 372,
+                "w": 89,
+                "h": 12,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        },
+        {
+          "sample_id": "sample_002_login_wireframe",
+          "metrics": {
+            "total_gt": 2,
+            "total_pred": 3,
+            "tp": 2,
+            "fp": 1,
+            "fn": 0,
+            "precision": 0.6666666666666666,
+            "recall": 1.0,
+            "f1": 0.8,
+            "mean_iou_50": 1.0,
+            "elements": [
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "24%",
+                "confidence": 0.244,
+                "box": [
+                  204,
+                  57,
+                  279,
+                  397
+                ],
+                "x1": 57,
+                "y1": 204,
+                "x2": 397,
+                "y2": 279,
+                "w": 340,
+                "h": 75,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "23%",
+                "confidence": 0.232,
+                "box": [
+                  110,
+                  57,
+                  186,
+                  403
+                ],
+                "x1": 57,
+                "y1": 110,
+                "x2": 403,
+                "y2": 186,
+                "w": 346,
+                "h": 76,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "22%",
+                "confidence": 0.218,
+                "box": [
+                  111,
+                  52,
+                  187,
+                  397
+                ],
+                "x1": 52,
+                "y1": 111,
+                "x2": 397,
+                "y2": 187,
+                "w": 345,
+                "h": 76,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        }
+      ],
+      "recall_retention_pct": 100.0
+    },
+    "pencil_jitter_fade": {
+      "total_samples": 2,
+      "total_gt": 8,
+      "total_tp": 2,
+      "total_fp": 12,
+      "total_fn": 6,
+      "precision": 0.1429,
+      "recall": 0.25,
+      "f1_score": 0.1818,
+      "mAP_at_50": 0.9386,
+      "per_sample": [
+        {
+          "sample_id": "sample_001_sketches_real",
+          "metrics": {
+            "total_gt": 6,
+            "total_pred": 9,
+            "tp": 0,
+            "fp": 9,
+            "fn": 6,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mean_iou_50": 0.0,
+            "elements": [
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.981,
+                "box": [
+                  285,
+                  129,
+                  336,
+                  190
+                ],
+                "x1": 129,
+                "y1": 285,
+                "x2": 190,
+                "y2": 336,
+                "w": 61,
+                "h": 51,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.978,
+                "box": [
+                  360,
+                  131,
+                  411,
+                  192
+                ],
+                "x1": 131,
+                "y1": 360,
+                "x2": 192,
+                "y2": 411,
+                "w": 61,
+                "h": 51,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "67%",
+                "confidence": 0.666,
+                "box": [
+                  183,
+                  109,
+                  248,
+                  310
+                ],
+                "x1": 109,
+                "y1": 183,
+                "x2": 310,
+                "y2": 248,
+                "w": 201,
+                "h": 65,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "45%",
+                "confidence": 0.452,
+                "box": [
+                  73,
+                  24,
+                  115,
+                  112
+                ],
+                "x1": 24,
+                "y1": 73,
+                "x2": 112,
+                "y2": 115,
+                "w": 88,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "39%",
+                "confidence": 0.39,
+                "box": [
+                  360,
+                  201,
+                  372,
+                  291
+                ],
+                "x1": 201,
+                "y1": 360,
+                "x2": 291,
+                "y2": 372,
+                "w": 90,
+                "h": 12,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "29%",
+                "confidence": 0.289,
+                "box": [
+                  183,
+                  25,
+                  246,
+                  114
+                ],
+                "x1": 25,
+                "y1": 183,
+                "x2": 114,
+                "y2": 246,
+                "w": 89,
+                "h": 63,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "25%",
+                "confidence": 0.249,
+                "box": [
+                  121,
+                  20,
+                  168,
+                  311
+                ],
+                "x1": 20,
+                "y1": 121,
+                "x2": 311,
+                "y2": 168,
+                "w": 291,
+                "h": 47,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "22%",
+                "confidence": 0.22,
+                "box": [
+                  313,
+                  238,
+                  336,
+                  290
+                ],
+                "x1": 238,
+                "y1": 313,
+                "x2": 290,
+                "y2": 336,
+                "w": 52,
+                "h": 23,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "21%",
+                "confidence": 0.209,
+                "box": [
+                  390,
+                  202,
+                  412,
+                  292
+                ],
+                "x1": 202,
+                "y1": 390,
+                "x2": 292,
+                "y2": 412,
+                "w": 90,
+                "h": 22,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        },
+        {
+          "sample_id": "sample_002_login_wireframe",
+          "metrics": {
+            "total_gt": 2,
+            "total_pred": 5,
+            "tp": 2,
+            "fp": 3,
+            "fn": 0,
+            "precision": 0.4,
+            "recall": 1.0,
+            "f1": 0.5714285714285715,
+            "mean_iou_50": 0.9386032424867308,
+            "elements": [
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "39%",
+                "confidence": 0.391,
+                "box": [
+                  112,
+                  53,
+                  232,
+                  400
+                ],
+                "x1": 53,
+                "y1": 112,
+                "x2": 400,
+                "y2": 232,
+                "w": 347,
+                "h": 120,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "35%",
+                "confidence": 0.347,
+                "box": [
+                  111,
+                  56,
+                  186,
+                  401
+                ],
+                "x1": 56,
+                "y1": 111,
+                "x2": 401,
+                "y2": 186,
+                "w": 345,
+                "h": 75,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "30%",
+                "confidence": 0.298,
+                "box": [
+                  201,
+                  56,
+                  277,
+                  384
+                ],
+                "x1": 56,
+                "y1": 201,
+                "x2": 384,
+                "y2": 277,
+                "w": 328,
+                "h": 76,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "22%",
+                "confidence": 0.216,
+                "box": [
+                  206,
+                  57,
+                  274,
+                  181
+                ],
+                "x1": 57,
+                "y1": 206,
+                "x2": 181,
+                "y2": 274,
+                "w": 124,
+                "h": 68,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "18%",
+                "confidence": 0.181,
+                "box": [
+                  56,
+                  160,
+                  88,
+                  255
+                ],
+                "x1": 160,
+                "y1": 56,
+                "x2": 255,
+                "y2": 88,
+                "w": 95,
+                "h": 32,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        }
+      ],
+      "recall_retention_pct": 100.0
+    },
+    "mobile_shadows": {
+      "total_samples": 2,
+      "total_gt": 8,
+      "total_tp": 2,
+      "total_fp": 10,
+      "total_fn": 6,
+      "precision": 0.1667,
+      "recall": 0.25,
+      "f1_score": 0.2,
+      "mAP_at_50": 0.9817,
+      "per_sample": [
+        {
+          "sample_id": "sample_001_sketches_real",
+          "metrics": {
+            "total_gt": 6,
+            "total_pred": 10,
+            "tp": 0,
+            "fp": 10,
+            "fn": 6,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mean_iou_50": 0.0,
+            "elements": [
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.98,
+                "box": [
+                  360,
+                  131,
+                  410,
+                  192
+                ],
+                "x1": 131,
+                "y1": 360,
+                "x2": 192,
+                "y2": 410,
+                "w": 61,
+                "h": 50,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "97%",
+                "confidence": 0.974,
+                "box": [
+                  285,
+                  129,
+                  336,
+                  190
+                ],
+                "x1": 129,
+                "y1": 285,
+                "x2": 190,
+                "y2": 336,
+                "w": 61,
+                "h": 51,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "87%",
+                "confidence": 0.868,
+                "box": [
+                  183,
+                  111,
+                  249,
+                  310
+                ],
+                "x1": 111,
+                "y1": 183,
+                "x2": 310,
+                "y2": 249,
+                "w": 199,
+                "h": 66,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "87%",
+                "confidence": 0.867,
+                "box": [
+                  73,
+                  24,
+                  115,
+                  113
+                ],
+                "x1": 24,
+                "y1": 73,
+                "x2": 113,
+                "y2": 115,
+                "w": 89,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "47%",
+                "confidence": 0.474,
+                "box": [
+                  186,
+                  23,
+                  237,
+                  107
+                ],
+                "x1": 23,
+                "y1": 186,
+                "x2": 107,
+                "y2": 237,
+                "w": 84,
+                "h": 51,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "28%",
+                "confidence": 0.278,
+                "box": [
+                  126,
+                  20,
+                  167,
+                  194
+                ],
+                "x1": 20,
+                "y1": 126,
+                "x2": 194,
+                "y2": 167,
+                "w": 174,
+                "h": 41,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "26%",
+                "confidence": 0.257,
+                "box": [
+                  359,
+                  201,
+                  372,
+                  291
+                ],
+                "x1": 201,
+                "y1": 359,
+                "x2": 291,
+                "y2": 372,
+                "w": 90,
+                "h": 13,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "TextBox",
+                "label": "TextBox",
+                "conf": "23%",
+                "confidence": 0.226,
+                "box": [
+                  300,
+                  34,
+                  309,
+                  105
+                ],
+                "x1": 34,
+                "y1": 300,
+                "x2": 105,
+                "y2": 309,
+                "w": 71,
+                "h": 9,
+                "color": "bg-cyan-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "21%",
+                "confidence": 0.209,
+                "box": [
+                  360,
+                  201,
+                  372,
+                  290
+                ],
+                "x1": 201,
+                "y1": 360,
+                "x2": 290,
+                "y2": 372,
+                "w": 89,
+                "h": 12,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "TextBox",
+                "label": "TextBox",
+                "conf": "19%",
+                "confidence": 0.186,
+                "box": [
+                  307,
+                  198,
+                  319,
+                  289
+                ],
+                "x1": 198,
+                "y1": 307,
+                "x2": 289,
+                "y2": 319,
+                "w": 91,
+                "h": 12,
+                "color": "bg-cyan-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        },
+        {
+          "sample_id": "sample_002_login_wireframe",
+          "metrics": {
+            "total_gt": 2,
+            "total_pred": 2,
+            "tp": 2,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "mean_iou_50": 0.9817456065999888,
+            "elements": [
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "38%",
+                "confidence": 0.38,
+                "box": [
+                  110,
+                  56,
+                  186,
+                  402
+                ],
+                "x1": 56,
+                "y1": 110,
+                "x2": 402,
+                "y2": 186,
+                "w": 346,
+                "h": 76,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "28%",
+                "confidence": 0.28,
+                "box": [
+                  204,
+                  57,
+                  278,
+                  391
+                ],
+                "x1": 57,
+                "y1": 204,
+                "x2": 391,
+                "y2": 278,
+                "w": 334,
+                "h": 74,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        }
+      ],
+      "recall_retention_pct": 100.0
+    },
+    "composite_stress": {
+      "total_samples": 2,
+      "total_gt": 8,
+      "total_tp": 2,
+      "total_fp": 11,
+      "total_fn": 6,
+      "precision": 0.1538,
+      "recall": 0.25,
+      "f1_score": 0.1905,
+      "mAP_at_50": 0.9413,
+      "per_sample": [
+        {
+          "sample_id": "sample_001_sketches_real",
+          "metrics": {
+            "total_gt": 6,
+            "total_pred": 8,
+            "tp": 0,
+            "fp": 8,
+            "fn": 6,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mean_iou_50": 0.0,
+            "elements": [
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.978,
+                "box": [
+                  286,
+                  129,
+                  336,
+                  190
+                ],
+                "x1": 129,
+                "y1": 286,
+                "x2": 190,
+                "y2": 336,
+                "w": 61,
+                "h": 50,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "98%",
+                "confidence": 0.976,
+                "box": [
+                  361,
+                  131,
+                  411,
+                  192
+                ],
+                "x1": 131,
+                "y1": 361,
+                "x2": 192,
+                "y2": 411,
+                "w": 61,
+                "h": 50,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "82%",
+                "confidence": 0.817,
+                "box": [
+                  73,
+                  24,
+                  115,
+                  113
+                ],
+                "x1": 24,
+                "y1": 73,
+                "x2": 113,
+                "y2": 115,
+                "w": 89,
+                "h": 42,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "64%",
+                "confidence": 0.642,
+                "box": [
+                  183,
+                  111,
+                  247,
+                  310
+                ],
+                "x1": 111,
+                "y1": 183,
+                "x2": 310,
+                "y2": 247,
+                "w": 199,
+                "h": 64,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "38%",
+                "confidence": 0.377,
+                "box": [
+                  359,
+                  201,
+                  372,
+                  291
+                ],
+                "x1": 201,
+                "y1": 359,
+                "x2": 291,
+                "y2": 372,
+                "w": 90,
+                "h": 13,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "25%",
+                "confidence": 0.254,
+                "box": [
+                  388,
+                  205,
+                  412,
+                  292
+                ],
+                "x1": 205,
+                "y1": 388,
+                "x2": 292,
+                "y2": 412,
+                "w": 87,
+                "h": 24,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "22%",
+                "confidence": 0.218,
+                "box": [
+                  121,
+                  19,
+                  168,
+                  311
+                ],
+                "x1": 19,
+                "y1": 121,
+                "x2": 311,
+                "y2": 168,
+                "w": 292,
+                "h": 47,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "20%",
+                "confidence": 0.204,
+                "box": [
+                  182,
+                  25,
+                  249,
+                  115
+                ],
+                "x1": 25,
+                "y1": 182,
+                "x2": 115,
+                "y2": 249,
+                "w": 90,
+                "h": 67,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        },
+        {
+          "sample_id": "sample_002_login_wireframe",
+          "metrics": {
+            "total_gt": 2,
+            "total_pred": 5,
+            "tp": 2,
+            "fp": 3,
+            "fn": 0,
+            "precision": 0.4,
+            "recall": 1.0,
+            "f1": 0.5714285714285715,
+            "mean_iou_50": 0.941348742206321,
+            "elements": [
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "38%",
+                "confidence": 0.384,
+                "box": [
+                  111,
+                  56,
+                  186,
+                  402
+                ],
+                "x1": 56,
+                "y1": 111,
+                "x2": 402,
+                "y2": 186,
+                "w": 346,
+                "h": 75,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "36%",
+                "confidence": 0.362,
+                "box": [
+                  201,
+                  56,
+                  277,
+                  385
+                ],
+                "x1": 56,
+                "y1": 201,
+                "x2": 385,
+                "y2": 277,
+                "w": 329,
+                "h": 76,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Image",
+                "label": "Image",
+                "conf": "26%",
+                "confidence": 0.263,
+                "box": [
+                  112,
+                  53,
+                  232,
+                  401
+                ],
+                "x1": 53,
+                "y1": 112,
+                "x2": 401,
+                "y2": 232,
+                "w": 348,
+                "h": 120,
+                "color": "bg-emerald-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "Button",
+                "label": "Button",
+                "conf": "20%",
+                "confidence": 0.201,
+                "box": [
+                  206,
+                  58,
+                  275,
+                  185
+                ],
+                "x1": 58,
+                "y1": 206,
+                "x2": 185,
+                "y2": 275,
+                "w": 127,
+                "h": 69,
+                "color": "bg-rose-500",
+                "source": "yolo_v8"
+              },
+              {
+                "name": "RadioButton",
+                "label": "RadioButton",
+                "conf": "18%",
+                "confidence": 0.184,
+                "box": [
+                  56,
+                  160,
+                  88,
+                  255
+                ],
+                "x1": 160,
+                "y1": 56,
+                "x2": 255,
+                "y2": 88,
+                "w": 95,
+                "h": 32,
+                "color": "bg-orange-500",
+                "source": "yolo_v8"
+              }
+            ]
+          }
+        }
+      ],
+      "recall_retention_pct": 100.0
+    }
+  }
+}

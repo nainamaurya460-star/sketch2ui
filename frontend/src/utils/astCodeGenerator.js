@@ -148,20 +148,36 @@ function renderElement(el, isJsx = true, inRow = false, isSecondaryBtn = false) 
   if (['button', 'btn', 'submit'].includes(type)) {
     const isSecondary = isSecondaryBtn || el.variant === 'secondary';
     if (isSecondary) {
-      const text = customText || 'Cancel';
+      const text = customText || el.text || 'Cancel';
       return `<button ${attr}="px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-xs transition-all cursor-pointer">${text}</button>`;
     } else {
-      const text = customText || 'Submit';
+      const text = customText || el.text || 'Submit';
       return `<button ${attr}="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs shadow-lg shadow-cyan-500/20 transition-all cursor-pointer">${text}</button>`;
     }
   }
 
   // 3. TextBox / Input
   if (['textbox', 'input', 'input_field', 'textfield'].includes(type)) {
-    const placeholder = customText || 'Enter text...';
-    const inputType = placeholder.toLowerCase().includes('password') ? 'password' : 'text';
+    const placeholder = el.placeholder || customText || 'Enter text...';
+    const labelText = el.label_above || (el.label && !['textbox', 'input', 'textfield', 'input_field'].includes(el.label.toLowerCase()) ? el.label : null);
+    
+    let inputType = 'text';
+    if (el.type) {
+      inputType = el.type;
+    } else if (placeholder.toLowerCase().includes('email') || placeholder.includes('@') || (labelText && labelText.toLowerCase().includes('email'))) {
+      inputType = 'email';
+    } else if (placeholder.toLowerCase().includes('password') || (labelText && labelText.toLowerCase().includes('password'))) {
+      inputType = 'password';
+    }
+
     const widthCls = inRow ? 'flex-1 w-full' : 'w-full';
-    return `<input type="${inputType}" placeholder="${placeholder}" ${attr}="${widthCls} px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />`;
+    const inputMarkup = `<input type="${inputType}" placeholder="${placeholder}" ${attr}="${widthCls} px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50" />`;
+
+    if (labelText) {
+      const containerW = inRow ? 'flex-1 w-full' : 'w-full';
+      return `<div ${attr}="${containerW} space-y-1.5">\n  <label ${attr}="block text-xs font-medium text-zinc-300">${labelText}</label>\n  ${inputMarkup}\n</div>`;
+    }
+    return inputMarkup;
   }
 
   // 4. Paragraph
@@ -238,6 +254,14 @@ export function generateJsxAndTailwind(elements, projectName = 'Synthesized Wire
         cluster.elements.forEach((el, idx) => {
           const isSecondary = idx === 0 && cluster.elements.length > 1;
           const rendered = renderElement(el, true, true, isSecondary);
+          lines.push(`        ${rendered}`);
+        });
+        lines.push('      </div>');
+      } else if (cluster.elements.some(e => ['checkbox', 'check_box'].includes((e.name || '').toLowerCase()))) {
+        // Production Checkbox flex row
+        lines.push('      <div className="flex items-center justify-between py-1">');
+        cluster.elements.forEach((el) => {
+          const rendered = renderElement(el, true, true, false);
           lines.push(`        ${rendered}`);
         });
         lines.push('      </div>');

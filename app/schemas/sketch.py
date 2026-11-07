@@ -27,6 +27,11 @@ class DetectedElement(BaseModel):
     conf: str
     box: List[int]
     color: Optional[str] = None
+    text: Optional[str] = None
+    label_above: Optional[str] = None
+    placeholder: Optional[str] = None
+    class_name: Optional[str] = None
+    variant: Optional[str] = None
 
 class GeneratedCode(BaseModel):
     framework: str = "React + Tailwind"
@@ -44,6 +49,7 @@ class SketchPredictResponse(BaseModel):
     elements_count: int
     detected_elements: List[DetectedElement]
     generated_code: GeneratedCode
+    engine_used: Optional[str] = "local_cv_fallback"
 
     model_config = {
         "populate_by_name": True

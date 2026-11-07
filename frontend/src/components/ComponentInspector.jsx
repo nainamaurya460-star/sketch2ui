@@ -11,16 +11,29 @@ import {
 
 const COMPONENT_TYPES = [
   { value: 'Button', label: 'Button' },
-  { value: 'TextBox', label: 'Text Input / Field' },
-  { value: 'Heading', label: 'Heading / Title' },
-  { value: 'Paragraph', label: 'Paragraph / Description' },
+  { value: 'TextBox', label: 'TextBox' },
+  { value: 'Heading', label: 'Heading' },
+  { value: 'Image', label: 'Image' },
+  { value: 'CheckBox', label: 'CheckBox' },
+  { value: 'Link', label: 'Link' },
+  { value: 'Paragraph', label: 'Paragraph' },
   { value: 'Label', label: 'Label' },
-  { value: 'CheckBox', label: 'Checkbox' },
-  { value: 'RadioButton', label: 'Radio Button' },
-  { value: 'Image', label: 'Image Placeholder' },
-  { value: 'Select', label: 'Select / Dropdown' },
-  { value: 'Link', label: 'Anchor Link' },
+  { value: 'RadioButton', label: 'RadioButton' },
+  { value: 'Select', label: 'Select' },
 ];
+
+const COLOR_MAP = {
+  button: 'bg-rose-500',
+  checkbox: 'bg-amber-500',
+  heading: 'bg-purple-500',
+  image: 'bg-emerald-500',
+  label: 'bg-indigo-500',
+  link: 'bg-pink-500',
+  paragraph: 'bg-blue-500',
+  radiobutton: 'bg-orange-500',
+  select: 'bg-teal-500',
+  textbox: 'bg-cyan-500',
+};
 
 export default function ComponentInspector({ element, onUpdateElement, onDeleteElement, onClose }) {
   if (!element) return null;
@@ -29,7 +42,7 @@ export default function ComponentInspector({ element, onUpdateElement, onDeleteE
   const isButton = ['button', 'btn', 'submit'].includes(currentType.toLowerCase());
 
   return (
-    <div className="w-80 border-l border-white/10 bg-[#090b10]/95 backdrop-blur-2xl flex flex-col h-full z-20 shrink-0 shadow-2xl animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-y-0 right-0 xl:static w-80 border-l border-white/10 bg-[#090b10]/95 backdrop-blur-2xl flex flex-col h-full z-30 shrink-0 shadow-2xl animate-in slide-in-from-right duration-200">
       
       {/* Header */}
       <div className="h-14 px-5 border-b border-white/10 flex items-center justify-between shrink-0 bg-white/[0.01]">
@@ -64,7 +77,7 @@ export default function ComponentInspector({ element, onUpdateElement, onDeleteE
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${element.color || 'bg-cyan-500'}`} />
+            <span className={`w-2.5 h-2.5 rounded-full ${element.color || COLOR_MAP[currentType.toLowerCase()] || 'bg-cyan-500'}`} />
             <span className="text-sm font-semibold text-white">
               {element.name || 'Component'}
             </span>
@@ -79,7 +92,14 @@ export default function ComponentInspector({ element, onUpdateElement, onDeleteE
           </label>
           <select
             value={currentType}
-            onChange={(e) => onUpdateElement({ name: e.target.value })}
+            onChange={(e) => {
+              const newType = e.target.value;
+              onUpdateElement({ 
+                name: newType,
+                label: newType,
+                color: COLOR_MAP[newType.toLowerCase()] || 'bg-cyan-500'
+              });
+            }}
             className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500/50 cursor-pointer"
           >
             {COMPONENT_TYPES.map(type => (

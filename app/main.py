@@ -12,8 +12,11 @@ from typing import List
 from app.services.cv_engine import preprocess_sketch
 from app.services.heuristic_service import process_ui_pipeline
 from app.core.limiter import limiter
+from app.core.database import init_db
 from app.api.v1.endpoints.sketch import router as sketch_router
 from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.projects import router as projects_router
 
 app = FastAPI(
     title="ASketch2UI API",
@@ -56,15 +59,22 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-# Mount Routers: Health Diagnostics and Sketch Engine
+# Mount Routers: Health Diagnostics, Sketch Engine, Auth & Projects
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(health_router)
 app.include_router(sketch_router)
+app.include_router(auth_router)
+app.include_router(projects_router)
 
 
 @app.on_event("startup")
 async def startup_warmup():
-    """Warmup neural pipelines on server start for minimum first-request latency."""
+    """Initialize database and warmup neural pipelines on server start."""
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Warning: database initialization failed: {e}")
+
     try:
         from app.services.ocr_service import get_ocr_service
         ocr = get_ocr_service()

@@ -1,31 +1,34 @@
-<<<<<<< HEAD
-﻿node_modules/
-*/node_modules/
-venv/
-*/venv/
-env/
-.env
-dist/
-build/
-__pycache__/
-*.pyc
-.vscode/
-=======
+# Python environment & cache
 venv/
 .venv/
+*/venv/
+env/
 __pycache__/
 *.pyc
-.env
-.vscode/
+*.pyo
+*.pyd
+.Python
+*.db
+*.sqlite3
+app/sketch2ui.db
 
-# Node dependencies
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node dependencies & builds
 node_modules/
 **/node_modules/
-backend-app/node_modules/
+dist/
+build/
 
-# OS generated files
+# Editor & OS files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
+
+# Datasets & large binaries
 dataset/archive.zip
 dataset/base_dataset/
->>>>>>> d0e0a2b634e220b984df5160a2f8362fe4f20355

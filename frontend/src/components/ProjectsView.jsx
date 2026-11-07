@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FolderGit2, 
   Plus, 
@@ -15,16 +15,48 @@ import {
   ExternalLink, 
   Clock,
   BookOpen,
-  Settings 
+  Settings,
+  Cloud,
+  CloudOff,
+  User,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
 import { getProjects, deleteProject, renameProject, formatRelativeTime } from '../services/storage';
+import { fetchProjects, deleteProjectApi, updateProjectApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails }) {
-  const [projects, setProjects] = useState(() => getProjects());
+  const { user, token, isAuthenticated, openAuthModal, logout } = useAuth();
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [elementFilter, setElementFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+
+  // Load projects from cloud backend if logged in; otherwise fallback to localStorage
+  const loadProjects = async () => {
+    setIsLoading(true);
+    if (isAuthenticated && token) {
+      try {
+        const cloudProjects = await fetchProjects(token);
+        setProjects(cloudProjects);
+      } catch (err) {
+        console.warn('[ProjectsView] Failed to fetch cloud projects, falling back to local storage:', err.message);
+        setProjects(getProjects());
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setProjects(getProjects());
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProjects();
+  }, [isAuthenticated, token]);
 
   // Inline rename handlers
   const handleStartRename = (proj, e) => {
@@ -33,11 +65,20 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
     setEditName(proj.name || '');
   };
 
-  const handleSaveRename = (id) => {
+  const handleSaveRename = async (id) => {
     const trimmed = editName.trim();
     if (trimmed) {
+      if (isAuthenticated && token) {
+        try {
+          await updateProjectApi(id, { title: trimmed }, token);
+        } catch (err) {
+          console.warn('[ProjectsView] Cloud rename failed, updating locally:', err);
+        }
+      }
       renameProject(id, trimmed);
-      setProjects(getProjects());
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, name: trimmed, updatedAt: new Date().toISOString() } : p))
+      );
     }
     setEditingId(null);
   };
@@ -49,10 +90,17 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
   };
 
   // Delete project handler
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     e.stopPropagation();
+    if (isAuthenticated && token) {
+      try {
+        await deleteProjectApi(id, token);
+      } catch (err) {
+        console.warn('[ProjectsView] Cloud delete failed:', err);
+      }
+    }
     const updated = deleteProject(id);
-    setProjects(updated);
+    setProjects((prev) => prev.filter((p) => p.id !== id));
   };
 
   // Live search and filter: matches project name OR component count
@@ -152,12 +200,43 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-cyan-400 to-pink-500 flex items-center justify-center">
-            <Sparkles className="w-3 h-3 text-black font-bold" />
-          </div>
-          <p className="text-xs font-medium text-white leading-tight">Persistent Local Projects</p>
-          <p className="text-[10px] text-zinc-500 font-mono">Synced to localStorage</p>
+        {/* Sync & Auth Status Card */}
+        <div className="space-y-3">
+          {isAuthenticated ? (
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-cyan-500/20 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-cyan-400">
+                  <Cloud className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Cloud Synced</span>
+                </div>
+                <button
+                  onClick={logout}
+                  title="Sign Out"
+                  className="p-1 rounded text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                >
+                  <LogOut className="w-3 h-3" />
+                </button>
+              </div>
+              <p className="text-xs font-medium text-white truncate">{user?.name || user?.email}</p>
+              <p className="text-[10px] text-zinc-500 font-mono truncate">{user?.email}</p>
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <CloudOff className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-mono uppercase tracking-wider">Guest Mode</span>
+              </div>
+              <p className="text-xs font-medium text-white leading-tight">Persistent Local Projects</p>
+              <p className="text-[10px] text-zinc-500">Sign in to sync projects to cloud storage.</p>
+              <button
+                type="button"
+                onClick={() => openAuthModal('login')}
+                className="w-full mt-1 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium transition-all cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -171,6 +250,11 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
             <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[11px] font-mono">
               {projects.length} Saved
             </span>
+            {isAuthenticated && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+                Cloud Active
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -195,6 +279,15 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
                 </button>
               ))}
             </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={loadProjects}
+              title="Refresh projects"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
 
             {/* Search Input */}
             <div className="relative">
@@ -228,7 +321,6 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
 
         {/* Dashboard Body */}
         <main className="p-8 max-w-7xl w-full mx-auto">
-          {/* Honest Empty State when no projects exist */}
           {projects.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 md:p-20 rounded-3xl border border-white/10 bg-[#090b10]/60 backdrop-blur-xl text-center space-y-6 max-w-lg mx-auto mt-16 shadow-2xl">
               <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.15)]">
@@ -249,7 +341,6 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
               </button>
             </div>
           ) : filtered.length === 0 ? (
-            /* Search filter with 0 matches */
             <div className="flex flex-col items-center justify-center p-16 rounded-2xl border border-white/10 bg-white/[0.01] text-center space-y-3 max-w-md mx-auto mt-12">
               <Search className="w-8 h-8 text-zinc-600" />
               <h4 className="text-sm font-semibold text-white">No matching projects found</h4>
@@ -262,7 +353,6 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
               </button>
             </div>
           ) : (
-            /* Non-Empty Real Projects Cards Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filtered.map((proj) => (
                 <div
@@ -286,15 +376,21 @@ export default function ProjectsView({ onNavigate, onOpenProject, onViewDetails 
                     )}
                     
                     {/* Badge on thumbnail */}
-                    <span className="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black/80 border border-white/10 text-cyan-400 font-mono text-[10px] backdrop-blur-md">
-                      {proj.elements_count || 0} ELMS
-                    </span>
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      {proj.isCloud && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 font-mono text-[9px] backdrop-blur-md flex items-center gap-1">
+                          <Cloud className="w-2.5 h-2.5" />
+                          <span>SYNCED</span>
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-md bg-black/80 border border-white/10 text-cyan-400 font-mono text-[10px] backdrop-blur-md">
+                        {proj.elements_count || 0} ELMS
+                      </span>
+                    </div>
                   </div>
 
                   {/* Card Content */}
                   <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                    
-                    {/* Title with Inline Rename Support */}
                     <div>
                       {editingId === proj.id ? (
                         <div 

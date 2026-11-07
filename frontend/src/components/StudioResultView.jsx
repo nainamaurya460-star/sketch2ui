@@ -26,7 +26,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { saveProject } from '../services/storage';
-import { exportProjectZip } from '../services/api';
+import { exportProjectZip, createProject, getAuthToken } from '../services/api';
 import ComponentInspector from './ComponentInspector';
 import { generateJsxAndTailwind } from '../utils/astCodeGenerator';
 
@@ -136,6 +136,12 @@ export default function StudioResultView({ data, sketchImage, onReset, onNavigat
       }
     };
     const saved = saveProject(projectPayload);
+    const token = getAuthToken();
+    if (token) {
+      createProject(projectPayload, token).catch((err) =>
+        console.warn('[StudioResultView] Cloud autosync notice:', err.message)
+      );
+    }
     if (onProjectUpdated) {
       onProjectUpdated(saved);
     }
